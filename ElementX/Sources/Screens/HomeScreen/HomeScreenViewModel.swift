@@ -100,6 +100,7 @@ class HomeScreenViewModel: HomeScreenViewModelType, HomeScreenViewModelProtocol 
                 guard let self else { return }
                 
                 state.shouldShowSpaceFilters = !filters.isEmpty
+                state.spaceFilters = filters
                 
                 if let selectedSpaceFilter = spaceFilterSubject.value,
                    !filters.contains(selectedSpaceFilter) {
@@ -109,6 +110,24 @@ class HomeScreenViewModel: HomeScreenViewModelType, HomeScreenViewModelProtocol 
             }
             .store(in: &cancellables)
         
+        // Which spaces are carrying something unread. The main room list is filtered by
+        // whichever space you're in, so this reads the unfiltered provider instead.
+        userSession.clientProxy.staticRoomSummaryProvider.roomListPublisher
+            .combineLatest(userSession.clientProxy.spaceService.spaceFilterPublisher)
+            .map { summaries, filters in
+                let unreadRoomIDs = Set(summaries.lazy
+                    .filter { !$0.isMuted && ($0.hasUnreadNotifications || $0.isMarkedUnread) }
+                    .map(\.id))
+
+                return Set(filters.lazy
+                    .filter { !$0.descendants.isDisjoint(with: unreadRoomIDs) }
+                    .map(\.id))
+            }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .weakAssign(to: \.state.unreadSpaceIDs, on: self)
+            .store(in: &cancellables)
+
         selectedRoomPublisher
             .weakAssign(to: \.state.selectedRoomID, on: self)
             .store(in: &cancellables)
@@ -129,6 +148,18 @@ class HomeScreenViewModel: HomeScreenViewModelType, HomeScreenViewModelProtocol 
             .sink { [weak self] _ in
                 self?.updateRooms()
             }
+            .store(in: &cancellables)
+        
+        appSettings.holmRailOrderPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .weakAssign(to: \.state.railOrder, on: self)
+            .store(in: &cancellables)
+        
+        appSettings.holmLinksPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .weakAssign(to: \.state.links, on: self)
             .store(in: &cancellables)
         
         appSettings.hasSeenNewSoundBannerPublisher
@@ -219,6 +250,25 @@ class HomeScreenViewModel: HomeScreenViewModelType, HomeScreenViewModelProtocol 
             roomSummaryProvider?.updateVisibleRange(range)
         case .startChat:
             actionsSubject.send(.presentStartChatScreen)
+        case .createSpace:
+            actionsSubject.send(.presentCreateSpaceScreen)
+        case .addLink(let link):
+            appSettings.holmLinks.append(link)
+        case .updateLink(let link):
+            if let index = appSettings.holmLinks.firstIndex(where: { $0.id == link.id }) {
+                appSettings.holmLinks[index] = link
+            }
+        case .removeLink(let link):
+            appSettings.holmLinks.removeAll { $0.id == link.id }
+        case .reorderRail(let order):
+            appSettings.holmRailOrder = order
+        case .openLink(let link):
+            actionsSubject.send(.presentLink(link))
+        case .addBridge(let userID):
+            actionsSubject.send(.presentUserProfile(userID: userID))
+        case .selectSpaceFilter(let filter):
+            spaceFilterSubject.send(filter)
+            state.selectedSpaceFilter = filter
         case .spaceFilters:
             if spaceFilterSubject.value != nil {
                 spaceFilterSubject.send(nil)

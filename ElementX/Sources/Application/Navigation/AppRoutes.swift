@@ -56,6 +56,8 @@ enum AppRoute: Hashable {
     case thread(roomID: String, threadRootEventID: String, focusEventID: String?)
     /// The search screen
     case search
+    /// The spaces list, reached from the room list toolbar rather than a bottom tab.
+    case spaces
     
     /// Whether or not the route should be handled by the authentication flow.
     var isAuthenticationRoute: Bool {

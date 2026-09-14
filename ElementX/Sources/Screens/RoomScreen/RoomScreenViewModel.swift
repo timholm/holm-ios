@@ -282,7 +282,9 @@ class RoomScreenViewModel: RoomScreenViewModelType, RoomScreenViewModelProtocol 
         }
         
         guard let userIdentity else {
-            MXLog.failure("User identity should be known at this point")
+            // Bridged contacts (Google Voice, SMS) have no cross-signing identity of their
+            // own, so a missing one is ordinary here — not a programming error to trap on.
+            MXLog.info("No identity for \(dmRecipient.userID); treating the DM as unverified.")
             state.dmRecipientDetails.verification = .notVerified
             return
         }

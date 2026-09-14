@@ -9,6 +9,42 @@
 import Compound
 import SwiftUI
 
+/// A squared-off, periwinkle-accented button style for the welcome screen, deliberately
+/// distinct from Compound's black capsule buttons used across the rest of the app.
+private struct HolmActionButtonStyle: ButtonStyle {
+    enum Kind { case filled, outline, text }
+    let kind: Kind
+
+    private let accent = Color(red: 0.180, green: 0.769, blue: 0.714)
+
+    func makeBody(configuration: Configuration) -> some View {
+        switch kind {
+        case .filled:
+            configuration.label
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(Color(red: 0.035, green: 0.055, blue: 0.058))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(accent.opacity(configuration.isPressed ? 0.78 : 1))
+                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        case .outline:
+            configuration.label
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.compound.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).stroke(accent, lineWidth: 1.5))
+                .opacity(configuration.isPressed ? 0.6 : 1)
+        case .text:
+            configuration.label
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(accent)
+                .underline()
+                .opacity(configuration.isPressed ? 0.6 : 1)
+        }
+    }
+}
+
 /// The screen shown at the beginning of the onboarding flow.
 struct AuthenticationStartScreen: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -104,55 +140,25 @@ struct AuthenticationStartScreen: View {
                 Button { context.send(viewAction: .loginWithQR) } label: {
                     Label(L10n.screenOnboardingSignInWithQrCode, icon: \.qrCode)
                 }
-                .buttonStyle(.compound(.primary))
+                .buttonStyle(HolmActionButtonStyle(kind: .outline))
                 .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.signInWithQr)
             }
-            
+
             Button { context.send(viewAction: .login) } label: {
                 Text(context.viewState.loginButtonTitle)
             }
-            .buttonStyle(.compound(.primary))
+            .buttonStyle(HolmActionButtonStyle(kind: .filled))
             .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.signIn)
-            
+
             if context.viewState.showCreateAccountButton {
                 Button { context.send(viewAction: .register) } label: {
                     Text(L10n.screenCreateAccountTitle)
                 }
-                .buttonStyle(.compound(.tertiary))
+                .buttonStyle(HolmActionButtonStyle(kind: .text))
             }
-            
-            versionText
-                .font(.compound.bodySM)
-                .foregroundColor(.compound.textSecondary)
-                .onTapGesture(count: 7) {
-                    context.send(viewAction: .reportProblem)
-                }
-                .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.appVersion)
-                .overlay(alignment: .trailing) {
-                    developerOptionsButton
-                        .scaledOffset(x: 32, y: -0.5, relativeTo: .compound.bodySM)
-                }
-                .padding(.top, 16)
         }
         .padding(.horizontal, verticalSizeClass == .compact ? 128 : 24)
         .readableFrame()
-    }
-    
-    var versionText: Text {
-        // Let's not deal with snapshotting a changing version string.
-        let shortVersionString = ProcessInfo.isRunningTests ? "0.0.0" : InfoPlistReader.main.bundleShortVersionString
-        return Text(L10n.screenOnboardingAppVersion(shortVersionString))
-    }
-    
-    @ViewBuilder
-    var developerOptionsButton: some View {
-        if AppSettings.appBuildType != .release, !ProcessInfo.isRunningTests {
-            Button { context.send(viewAction: .developerOptions) } label: {
-                CompoundIcon(\.code)
-                    .foregroundStyle(.compound.iconSecondary)
-            }
-            .accessibilityLabel(L10n.commonDeveloperOptions)
-        }
     }
     
     @ToolbarContentBuilder

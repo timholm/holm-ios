@@ -35,7 +35,7 @@ struct HomeScreenEmptyStateView: View {
                     .padding(.horizontal, 22)
             }
             .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
+            .buttonBorderShape(.roundedRectangle(radius: 6))
         }
         .padding(16)
     }

@@ -22,17 +22,22 @@ struct HomeScreen: View {
     private enum NavigationTransitionSourceID {
         case spaceFilters
     }
-    
+
+    /// Whether the spaces row is open. It lives here because the mark that opens it
+    /// sits in the toolbar while the row itself belongs to the list.
+    @State private var spacesExpanded = false
+
     var body: some View {
-        HomeScreenContent(context: context, scrollViewAdapter: scrollViewAdapter)
+        HomeScreenContent(context: context,
+                          scrollViewAdapter: scrollViewAdapter,
+                          spacesExpanded: $spacesExpanded)
             .alert(item: $context.alertInfo)
             .alert(item: $context.leaveRoomAlertItem,
                    actions: leaveRoomAlertActions,
                    message: leaveRoomAlertMessage)
             .navigationTitle(title)
-            .navigationBarTitleDisplayMode(Compound.supportsGlass ? .inline : .automatic)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
-            .toolbarRole(Compound.supportsGlass ? .editor : .automatic)
             .background(Color.compound.bgCanvasDefault.ignoresSafeArea())
             .track(screen: .Home)
             .toolbarBloom(hasSearchBar: context.viewState.isRoomListSearchEnabled)
@@ -56,58 +61,84 @@ struct HomeScreen: View {
     
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: Compound.supportsGlass ? .title : .navigationBarLeading) {
-            HStack(spacing: isInSidebar ? 8 : 12) {
-                // The settings button is inside the title on iOS 26 to workaround a
-                // weird liquid glass transition when pushing/popping a room.
-                settingsButton
-                    .buttonStyle(.borderless)
-                
-                if #available(iOS 26, *) {
-                    Text(title)
-                        .font(isInSidebar ? .compound.bodyLGSemibold : .compound.headingLGBold)
-                        .foregroundStyle(.compound.textPrimary)
-                        .minimumScaleFactor(isInSidebar ? 1 : 0.6) // Allow scaling down to bodyLG if needed.
+        // The corner shows where you are — Holm's mark on every message, or the space
+        // you're reading. Tapping it unfolds the spaces; they stay hidden until asked for.
+        ToolbarItem(placement: .navigationBarLeading) {
+            Button {
+                // Scrolling is what puts the row away, so the second tap is free:
+                // it takes you to your profile instead of just closing.
+                if spacesExpanded {
+                    context.send(viewAction: .showSettings)
+                } else {
+                    // The row lives at the top of the list, so bring the list with it —
+                    // you can reach for the spaces from anywhere in your chats. Scroll
+                    // after the row has taken its height, or we stop short of the top.
+                    // Jump rather than animate: animating a long scroll makes the list lay
+                    // out every row on the way past, which locks the screen for seconds.
+                    // Landing at the top first also means the row can grow above the
+                    // content without fighting a scroll that's still running.
+                    scrollListToTop()
+
+                    // From inside a space, the corner is also the way home.
+                    if context.viewState.selectedSpaceFilter != nil {
+                        context.send(viewAction: .selectSpaceFilter(nil))
+                    }
+
+                    spacesExpanded = true
                 }
+            } label: {
+                currentSpaceMark
             }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(spacesExpanded ? L10n.commonSettings : L10n.screenRoomlistYourSpaces)
+            .accessibilityAddTraits(spacesExpanded ? .isSelected : [])
+            .accessibilityIdentifier(A11yIdentifiers.homeScreen.spaceFilters)
+        }
+        .backportSharedBackgroundVisibility(.hidden)
+
+        ToolbarItem(placement: .principal) {
+            Text(title)
+                .font(.compound.bodyLGSemibold)
+                .foregroundStyle(.compound.textPrimary)
+                .lineLimit(1)
         }
         .backportSharedBackgroundVisibility(.hidden)
         
         ToolbarItem(placement: .primaryAction) {
-            if #available(iOS 26, *) {
-                newRoomButton
+            newRoomButton
+        }
+        .backportSharedBackgroundVisibility(.hidden)
+    }
+
+    /// Whatever you're looking at: your own face on every message, or the space you're in.
+    private func scrollListToTop() {
+        guard let scrollView = scrollViewAdapter.scrollView else { return }
+        let top = CGPoint(x: 0, y: -scrollView.adjustedContentInset.top)
+        guard scrollView.contentOffset != top else { return }
+        scrollView.setContentOffset(top, animated: false)
+    }
+
+    @ViewBuilder
+    private var currentSpaceMark: some View {
+        Group {
+            // While the row is open the corner is you — it's the way to your profile.
+            // Closed, it goes back to telling you which space you're reading.
+            if let space = context.viewState.selectedSpaceFilter, !spacesExpanded {
+                LoadableAvatarImage(url: space.room.avatarURL,
+                                    name: space.room.name,
+                                    contentID: space.room.id,
+                                    avatarSize: .room(on: .spaceFilters),
+                                    mediaProvider: context.mediaProvider)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
-                newRoomButton
-                    .buttonStyle(.compound(.super, size: .toolbarIcon))
+                AvatarSettingsButtonLabel(userProfile: context.viewState.userProfile,
+                                          mediaProvider: context.mediaProvider)
             }
         }
-        
-        if context.viewState.shouldShowSpaceFilters {
-            if #available(iOS 26, *) {
-                ToolbarSpacer(.fixed, placement: .primaryAction)
-            }
-            
-            ToolbarItem(placement: .primaryAction) {
-                SpaceFiltersButton(selected: context.viewState.selectedSpaceFilter != nil) {
-                    context.send(viewAction: .spaceFilters)
-                }
-                .matchedTransitionSource(id: NavigationTransitionSourceID.spaceFilters,
-                                         in: navigationTransitionNamespace)
-            }
-        }
+        .animation(.spring(response: 0.34, dampingFraction: 0.72), value: context.viewState.selectedSpaceFilter?.id)
+        .animation(.spring(response: 0.34, dampingFraction: 0.72), value: spacesExpanded)
     }
-    
-    private var settingsButton: some View {
-        Button {
-            context.send(viewAction: .showSettings)
-        } label: {
-            AvatarSettingsButtonLabel(userProfile: context.viewState.userProfile,
-                                      mediaProvider: context.mediaProvider)
-        }
-        .accessibilityLabel(L10n.commonSettings)
-        .accessibilityIdentifier(A11yIdentifiers.homeScreen.userAvatar)
-    }
-    
+
     @ViewBuilder
     private var newRoomButton: some View {
         switch context.viewState.roomListMode {
@@ -115,7 +146,8 @@ struct HomeScreen: View {
             Button {
                 context.send(viewAction: .startChat)
             } label: {
-                CompoundIcon(\.plus)
+                CompoundIcon(\.compose)
+                    .toolbarChrome()
             }
             .accessibilityLabel(L10n.actionStartChat)
             .accessibilityIdentifier(A11yIdentifiers.homeScreen.startChat)
@@ -136,49 +168,16 @@ struct HomeScreen: View {
         Text(item.subtitle)
     }
     
-    private struct SpaceFiltersButton: View {
-        @Environment(\.isInSidebar) private var isInSidebar
-        
-        var selected = false
-        var action: () -> Void
-        
-        /// Design prefers the custom style over the system's styling of a Toggle within a toolbar,
-        /// however Glass isn't supported for toolbar buttons in the sidebar on iPadOS 26 (likely due
-        /// to glass on glass being discouraged by Apple), so we need to handle our styling accordingly.
-        var shouldUseGlassButtonStyle: Bool {
-            !isInSidebar
-        }
-        
-        var body: some View {
-            if #available(iOS 26, *), shouldUseGlassButtonStyle {
-                if selected {
-                    content
-                        .backportButtonStyleGlassProminent()
-                        .tint(.compound.bgActionPrimaryRest)
-                } else {
-                    content
-                }
-            } else {
-                if selected {
-                    content
-                        .buttonStyle(.compound(.primary, size: .toolbarIcon))
-                } else {
-                    content
-                        .buttonStyle(.compound(.tertiary, size: .toolbarIcon))
-                }
-            }
-        }
-        
-        private var content: some View {
-            Button {
-                action()
-            } label: {
-                CompoundIcon(\.filter)
-            }
-            .accessibilityLabel(L10n.screenRoomlistYourSpaces)
-            .accessibilityAddTraits(selected ? .isSelected : [])
-            .accessibilityIdentifier(A11yIdentifiers.homeScreen.spaceFilters)
-        }
+}
+
+private extension View {
+    /// One soft container per toolbar action — no per-button circles, no glass rings.
+    func toolbarChrome(tinted: Bool = false) -> some View {
+        font(.compound.bodyLG)
+            .foregroundStyle(tinted ? Color.compound.textOnSolidPrimary : Color.compound.iconPrimary)
+            .frame(width: 46, height: 40)
+            .background(tinted ? Color.compound.bgAccentRest : Color.compound.bgSubtleSecondary,
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous))
     }
 }
 

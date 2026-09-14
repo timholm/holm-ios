@@ -21,8 +21,8 @@ struct HomeScreenRoomCell: View {
     let mediaProvider: MediaProviderProtocol!
     let action: (HomeScreenViewAction) -> Void
     
-    private let verticalInsets = 12.0
-    private let horizontalInsets = 16.0
+    private let verticalInsets = 15.0
+    private let horizontalInsets = 20.0
     
     var body: some View {
         Button {
@@ -30,9 +30,9 @@ struct HomeScreenRoomCell: View {
                 action(.selectRoom(roomIdentifier: roomID))
             }
         } label: {
-            HStack(spacing: 16.0) {
-                avatar
-                
+            HStack(spacing: 14.0) {
+                sealedAvatar
+
                 content
                     .padding(.vertical, verticalInsets)
                     .rowDivider(horizontalInsets: horizontalInsets)
@@ -44,16 +44,37 @@ struct HomeScreenRoomCell: View {
         .accessibilityIdentifier(A11yIdentifiers.homeScreen.roomName(room.name))
         .accessibilityHidden(redactionReasons.contains(.placeholder) ? true : false)
     }
-    
+
+    /// Every room wears the seal. The ring closes in gold while messages are waiting
+    /// and falls back to a quiet line once the room has been opened — the same two
+    /// pieces, body and ring, that the whole brand is built from.
     @ViewBuilder
-    private var avatar: some View {
+    private var sealedAvatar: some View {
         if dynamicTypeSize < .accessibility3 {
             RoomAvatarImage(avatar: room.avatar,
                             avatarSize: .room(on: .chats),
                             mediaProvider: mediaProvider)
                 .dynamicTypeSize(dynamicTypeSize < .accessibility1 ? dynamicTypeSize : .accessibility1)
+                .padding(4)
+                .overlay {
+                    Circle()
+                        .stroke(sealStyle, lineWidth: room.hasUnreads ? 1.6 : 1)
+                }
+                .shadow(color: room.hasUnreads ? Self.gold.opacity(0.35) : .clear, radius: 6)
+                .animation(.easeInOut(duration: 0.35), value: room.hasUnreads)
                 .accessibilityHidden(true)
         }
+    }
+
+    private static let gold = Color(red: 0.878, green: 0.702, blue: 0.396)
+
+    private var sealStyle: AnyShapeStyle {
+        room.hasUnreads
+            ? AnyShapeStyle(AngularGradient(colors: [Self.gold.opacity(0.4), Self.gold,
+                                                     Color.compound.iconAccentPrimary,
+                                                     Self.gold.opacity(0.4)],
+                                            center: .center))
+            : AnyShapeStyle(Color.compound.borderInteractiveSecondary)
     }
     
     private var content: some View {
@@ -95,14 +116,19 @@ struct HomeScreenRoomCell: View {
         }
     }
     
+    /// Weight — not colour or a badge — is what marks a room as unread.
+    private static func nameFont(emphasised: Bool) -> Font {
+        .system(.body).weight(emphasised ? .semibold : .regular)
+    }
+
     private var headerFont: Font {
         switch roomListActivityVisibility {
         case .current:
-            .compound.bodyLGSemibold
+            Self.nameFont(emphasised: true)
         case .show:
-            room.hasUnreads ? .compound.bodyLGSemibold : .compound.bodyLG
+            Self.nameFont(emphasised: room.hasUnreads)
         case .hide:
-            room.isHighlighted ? .compound.bodyLGSemibold : .compound.bodyLG
+            Self.nameFont(emphasised: room.isHighlighted)
         }
     }
     
@@ -157,21 +183,18 @@ struct HomeScreenRoomCell: View {
                     mentionIcon
                 }
                 
-                if room.badges.isDotShown {
-                    if roomListNotificationCountEnabled, room.isHighlighted, room.badges.notificationCount > 0 {
-                        Text(formattedNotificationCount)
-                            .font(.compound.bodySMSemibold)
-                            .foregroundColor(.compound.textOnSolidPrimary)
-                            .lineLimit(1)
-                            .padding(.horizontal, 6)
-                            .frame(minWidth: 20, minHeight: 20)
-                            .background(.compound.iconAccentTertiary, in: .capsule)
-                            .accessibilityLabel(L10n.a11yNotificationsNewMessages)
-                    } else {
-                        Circle()
-                            .frame(width: 12, height: 12)
-                            .accessibilityLabel(L10n.a11yNotificationsNewMessages)
-                    }
+                // No unread dot: the seal ring around the avatar already carries that.
+                // A count still earns its place when the room is calling for attention.
+                if room.badges.isDotShown,
+                   roomListNotificationCountEnabled, room.isHighlighted, room.badges.notificationCount > 0 {
+                    Text(formattedNotificationCount)
+                        .font(.compound.bodyXSSemibold)
+                        .foregroundColor(.compound.textOnSolidPrimary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 6)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(.compound.iconAccentPrimary, in: .capsule)
+                        .accessibilityLabel(L10n.a11yNotificationsNewMessages)
                 }
             }
             .foregroundColor(room.isHighlighted ? .compound.iconAccentTertiary : .compound.iconQuaternary)

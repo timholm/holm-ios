@@ -34,6 +34,9 @@ enum HomeScreenCoordinatorAction {
     case presentRecoveryKeyScreen
     case presentEncryptionResetScreen
     case presentStartChatScreen
+    case presentCreateSpaceScreen
+    case presentUserProfile(userID: String)
+    case presentLink(HolmLink)
     case logout
 }
 
@@ -87,6 +90,12 @@ final class HomeScreenCoordinator: CoordinatorProtocol {
                     actionsSubject.send(.presentEncryptionResetScreen)
                 case .presentStartChatScreen:
                     actionsSubject.send(.presentStartChatScreen)
+                case .presentCreateSpaceScreen:
+                    actionsSubject.send(.presentCreateSpaceScreen)
+                case .presentUserProfile(let userID):
+                    actionsSubject.send(.presentUserProfile(userID: userID))
+                case .presentLink(let link):
+                    actionsSubject.send(.presentLink(link))
                 case .logout:
                     actionsSubject.send(.logout)
                 case .transferOwnership(let roomIdentifier):

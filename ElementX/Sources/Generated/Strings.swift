@@ -794,6 +794,8 @@ internal nonisolated enum L10n {
   internal static var commonSearchResults: String { return L10n.tr("Localizable", "common_search_results") }
   /// Security
   internal static var commonSecurity: String { return L10n.tr("Localizable", "common_security") }
+  /// App
+  internal static var settingsSectionApp: String { return L10n.tr("Localizable", "settings_section_app") }
   /// Seen by
   internal static var commonSeenBy: String { return L10n.tr("Localizable", "common_seen_by") }
   /// Select an account

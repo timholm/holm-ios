@@ -7,18 +7,56 @@
 //
 
 import Compound
+import PhotosUI
 import SentrySwiftUI
 import SwiftUI
 
 struct HomeScreenContent: View {
     @ObservedObject var context: HomeScreenViewModel.Context
     let scrollViewAdapter: ScrollViewAdapter
+    @Binding var spacesExpanded: Bool
     
     @State private var topSectionHeight: CGFloat = 0
+    @State private var isShowingBridges = false
+    @State private var isShowingAddLink = false
+    @State private var linkAwaitingPhoto: HolmLink?
+    @State private var photoItem: PhotosPickerItem?
+    @State private var isRearranging = false
     
     var body: some View {
         roomList
             .sentryTrace("\(Self.self)")
+            .fullScreenCover(isPresented: $isShowingAddLink) {
+                HolmAddLinkSheet { link in
+                    context.send(viewAction: .addLink(link))
+                }
+            }
+            .sheet(isPresented: $isRearranging) {
+                HolmRailOrderSheet(items: railItems, mediaProvider: context.mediaProvider) { order in
+                    context.send(viewAction: .reorderRail(order))
+                }
+            }
+            .photosPicker(isPresented: .init(get: { linkAwaitingPhoto != nil },
+                                             set: { if !$0 { linkAwaitingPhoto = nil } }),
+                          selection: $photoItem,
+                          matching: .images)
+            .onChange(of: photoItem) { _, item in
+                guard let item, var link = linkAwaitingPhoto else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let thumbnail = HolmLinkMetadata.thumbnail(from: data) {
+                        link.iconData = thumbnail
+                        context.send(viewAction: .updateLink(link))
+                    }
+                    photoItem = nil
+                    linkAwaitingPhoto = nil
+                }
+            }
+            .sheet(isPresented: $isShowingBridges) {
+                HolmBridgeDirectory(server: homeserverName) { bridge in
+                    context.send(viewAction: .addBridge(userID: bridge.botUserID(on: homeserverName)))
+                }
+            }
     }
     
     private var roomList: some View {
@@ -58,9 +96,6 @@ struct HomeScreenContent: View {
                             topSection
                         }
                     }
-                    .roomListSearchable(isEnabled: context.viewState.isRoomListSearchEnabled,
-                                        isSearchFieldFocused: $context.isSearchFieldFocused,
-                                        searchQuery: $context.searchQuery)
                 }
             }
             .introspect(.scrollView, on: .supportedVersions) { scrollView in
@@ -69,9 +104,20 @@ struct HomeScreenContent: View {
             }
             .onReceive(scrollViewAdapter.didScroll) { _ in
                 sendVisibleRange()
+
+                // Already at the top and still pulling? That asks for the spaces.
+                if !spacesExpanded, overscroll > 60 {
+                    spacesExpanded = true
+                }
             }
-            .onReceive(scrollViewAdapter.isScrolling) { _ in
+            .onReceive(scrollViewAdapter.isScrolling) { isScrolling in
                 updateVisibleRange()
+
+                // Reading the list puts the spaces away again; pulling down brings them back,
+                // as does the mark in the corner.
+                if isScrolling, spacesExpanded, overscroll <= 0 {
+                    spacesExpanded = false
+                }
             }
             .onChange(of: context.searchQuery) {
                 updateVisibleRange()
@@ -113,10 +159,37 @@ struct HomeScreenContent: View {
     @ViewBuilder
     private var topSection: some View {
         // An empty VStack causes glitches within the room list
-        if context.viewState.shouldShowFilters || context.viewState.shouldShowBanner {
+        if !context.viewState.spaceFilters.isEmpty || context.viewState.isRoomListSearchEnabled ||
+            context.viewState.shouldShowFilters || context.viewState.shouldShowBanner {
             VStack(spacing: 0) {
-                if context.viewState.shouldShowFilters {
+                if context.viewState.isRoomListSearchEnabled {
+                    HolmSearchField(query: $context.searchQuery,
+                                    isFocused: $context.isSearchFieldFocused)
+                }
+
+                HomeScreenSpaceBar(spaces: context.viewState.spaceFilters,
+                                   selected: context.viewState.selectedSpaceFilter,
+                                   unreadSpaceIDs: context.viewState.unreadSpaceIDs,
+                                   mediaProvider: context.mediaProvider,
+                                   isExpanded: spacesExpanded,
+                                   links: context.viewState.links,
+                                   order: context.viewState.railOrder,
+                                   onSelect: { context.send(viewAction: .selectSpaceFilter($0)) },
+                                   onOpenLink: { context.send(viewAction: .openLink($0)) },
+                                   onChangePhoto: { link in
+                                       linkAwaitingPhoto = link
+                                   },
+                                   onRemoveLink: { context.send(viewAction: .removeLink($0)) },
+                                   onRearrange: { isRearranging = true },
+                                   onCreateSpace: { context.send(viewAction: .createSpace) },
+                                   onAddBridge: { isShowingBridges = true },
+                                   onAddLink: { isShowingAddLink = true })
+
+                // Filters keep the same company as the spaces: hidden until you open the
+                // corner, and held open while one is actually doing something.
+                if context.viewState.shouldShowFilters, spacesExpanded || context.filtersState.isFiltering {
                     RoomListFiltersView(state: $context.filtersState)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 
                 if case let .show(state) = context.viewState.securityBannerMode {
@@ -126,10 +199,34 @@ struct HomeScreenContent: View {
                 }
             }
             .background(Color.compound.bgCanvasDefault)
+            .animation(.spring(response: 0.26, dampingFraction: 0.88), value: spacesExpanded)
             .readHeight($topSectionHeight)
         }
     }
     
+    private var railItems: [HolmRailItem] {
+        let items = context.viewState.spaceFilters.map(HolmRailItem.space) +
+            context.viewState.links.map(HolmRailItem.link)
+        let order = context.viewState.railOrder
+        guard !order.isEmpty else { return items }
+
+        return items.sorted {
+            (order.firstIndex(of: $0.id) ?? Int.max) < (order.firstIndex(of: $1.id) ?? Int.max)
+        }
+    }
+
+    /// The part of your user ID after the colon — the bridges live on the same server.
+    private var homeserverName: String {
+        context.viewState.userProfile.id.components(separatedBy: ":").last ?? ""
+    }
+
+    /// How far the list has been dragged past its top, in points. Zero or less means
+    /// you're reading the list rather than pulling on it.
+    private var overscroll: CGFloat {
+        guard let scrollView = scrollViewAdapter.scrollView else { return 0 }
+        return -(scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
+    }
+
     /// Often times the scroll view's content size isn't correct yet when this method is called e.g. when cancelling a search
     /// Dispatch it with a delay to allow the UI to update and the computations to be correct
     /// Once we move to iOS 17 we should remove all of this and use scroll anchors instead
@@ -175,7 +272,9 @@ private extension View {
     func roomListSearchable(isEnabled: Bool, isSearchFieldFocused: Binding<Bool>, searchQuery: Binding<String>) -> some View {
         if isEnabled {
             isSearching(isSearchFieldFocused)
-                .searchable(text: searchQuery, placement: .navigationBarDrawer(displayMode: .always))
+                // Search rides with the list: it scrolls away as you read and comes
+                // back when you pull down. Only the toolbar stays pinned.
+                .searchable(text: searchQuery, placement: .navigationBarDrawer(displayMode: .automatic))
                 .compoundSearchField()
                 .disableAutocorrection(true)
         } else {

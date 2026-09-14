@@ -121,9 +121,10 @@ class UserSessionFlowCoordinator: FlowCoordinatorProtocol {
                                                               navigationStackCoordinator: onboardingStackCoordinator,
                                                               flowParameters: flowParameters)
         
+        // Spaces is reached from the room list's toolbar, not a bottom tab, so the
+        // bar stays out of the way of the conversation list.
         var tabs: [NavigationTabCoordinator<HomeTab>.Tab] = [
-            .init(coordinator: chatsSplitCoordinator, details: chatsTabDetails),
-            .init(coordinator: spacesSplitCoordinator, details: spacesTabDetails)
+            .init(coordinator: chatsSplitCoordinator, details: chatsTabDetails)
         ]
         if let searchTabNavigationStackCoordinator, let searchTabDetails {
             tabs.append(.init(coordinator: searchTabNavigationStackCoordinator, details: searchTabDetails))
@@ -175,6 +176,10 @@ class UserSessionFlowCoordinator: FlowCoordinatorProtocol {
             if searchTabNavigationStackCoordinator != nil {
                 navigationTabCoordinator.selectedTab = .search
             }
+        case .spaces:
+            // Spaces are presented within the chats flow; there is no separate tab.
+            clearPresentedSheets(animated: animated)
+            navigationTabCoordinator.selectedTab = .chats
         }
     }
     

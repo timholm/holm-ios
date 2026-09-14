@@ -198,7 +198,8 @@ public struct CompoundTextFieldStyle: @MainActor TextFieldStyle {
     
     @MainActor
     public func _body(configuration: TextField<_Label>) -> some View {
-        let shape = Compound.supportsGlass ? AnyShape(Capsule()) : AnyShape(RoundedRectangle(cornerRadius: 14.0))
+        // Holm always uses a squared-off field, even on Liquid Glass, rather than Compound's pill shape.
+        let shape = AnyShape(RoundedRectangle(cornerRadius: 6.0))
         
         return VStack(alignment: .leading, spacing: 8) {
             labelText

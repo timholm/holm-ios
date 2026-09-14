@@ -993,6 +993,15 @@
 		9BE762B666215DD0E75C612A /* portrait_test_image.jpg in Resources */ = {isa = PBXBuildFile; fileRef = D09020DC830A83F768DCE4C8 /* portrait_test_image.jpg */; };
 		9C4EC28A921486B1775D7F8C /* IdentityConfirmedScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307702DD66E7DDCDD9214784 /* IdentityConfirmedScreen.swift */; };
 		9C63171267E22FEB288EC860 /* RoomHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1627F2D56477BD331F6D732C /* RoomHeaderView.swift */; };
+		A1B2C3D40000000000000004 /* HomeScreenSpaceBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000003 /* HomeScreenSpaceBar.swift */; };
+		A1B2C3D40000000000000006 /* HolmSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000005 /* HolmSearchField.swift */; };
+		A1B2C3D40000000000000008 /* HolmBridgeDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000007 /* HolmBridgeDirectory.swift */; };
+		A1B2C3D4000000000000000A /* HolmAddLinkSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000009 /* HolmAddLinkSheet.swift */; };
+		A1B2C3D40000000000000012 /* HolmLinkBrowserCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000011 /* HolmLinkBrowserCoordinator.swift */; };
+		A1B2C3D40000000000000010 /* HolmRailOrderSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000000F /* HolmRailOrderSheet.swift */; };
+		A1B2C3D4000000000000000E /* HolmLinkBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000000D /* HolmLinkBrowser.swift */; };
+		A1B2C3D4000000000000000C /* HolmLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000000B /* HolmLink.swift */; };
+		A1B2C3D40000000000000002 /* HolmMarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000001 /* HolmMarkView.swift */; };
 		9CBB04365408F9D6F46BA3A7 /* PinnedEventsTimelineFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54AAF72E821B4084B7E4298 /* PinnedEventsTimelineFlowCoordinator.swift */; };
 		9CCF6711DD50BFF8B5ACE9CF /* ReportRoomScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 276833816F5DEB1CE3B8BE1E /* ReportRoomScreen.swift */; };
 		9D2E03DB175A6AB14589076D /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 290FDEDA4D764B9F7EBE55A9 /* Algorithms */; };
@@ -1874,6 +1883,15 @@
 		1575947B7A6FE08C57FE5EE4 /* NetworkMonitorProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitorProtocol.swift; sourceTree = "<group>"; };
 		161CD412E75F4086F422AE39 /* SessionVerificationScreenStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionVerificationScreenStateMachine.swift; sourceTree = "<group>"; };
 		1627F2D56477BD331F6D732C /* RoomHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomHeaderView.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000003 /* HomeScreenSpaceBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeScreenSpaceBar.swift; path = ElementX/Sources/Screens/HomeScreen/View/HomeScreenSpaceBar.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D40000000000000005 /* HolmSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HolmSearchField.swift; path = ElementX/Sources/Screens/HomeScreen/View/HolmSearchField.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D40000000000000007 /* HolmBridgeDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HolmBridgeDirectory.swift; path = ElementX/Sources/Screens/HomeScreen/View/HolmBridgeDirectory.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D40000000000000009 /* HolmAddLinkSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HolmAddLinkSheet.swift; path = ElementX/Sources/Screens/HomeScreen/View/HolmAddLinkSheet.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D40000000000000011 /* HolmLinkBrowserCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HolmLinkBrowserCoordinator.swift; path = ElementX/Sources/Screens/HomeScreen/View/HolmLinkBrowserCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D4000000000000000F /* HolmRailOrderSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HolmRailOrderSheet.swift; path = ElementX/Sources/Screens/HomeScreen/View/HolmRailOrderSheet.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D4000000000000000D /* HolmLinkBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HolmLinkBrowser.swift; path = ElementX/Sources/Screens/HomeScreen/View/HolmLinkBrowser.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D4000000000000000B /* HolmLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HolmLink.swift; path = ElementX/Sources/Screens/HomeScreen/View/HolmLink.swift; sourceTree = SOURCE_ROOT; };
+		A1B2C3D40000000000000001 /* HolmMarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmMarkView.swift; sourceTree = "<group>"; };
 		162F321D3DB0729AF30FD967 /* SDKGeneratedMocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKGeneratedMocks.swift; sourceTree = "<group>"; };
 		166D45E1861A73B232109843 /* RoomDetailsScreenViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDetailsScreenViewModelTests.swift; sourceTree = "<group>"; };
 		166EE9FAC689FDA7A194C29C /* test_voice_message.m4a */ = {isa = PBXFileReference; path = test_voice_message.m4a; sourceTree = "<group>"; };
@@ -4107,6 +4125,15 @@
 				95547A6C69606B5282C765D3 /* RemoveItemButton.swift */,
 				BEF5FE93A06F563B477F024A /* RoomAvatarImage.swift */,
 				1627F2D56477BD331F6D732C /* RoomHeaderView.swift */,
+				A1B2C3D40000000000000003 /* HomeScreenSpaceBar.swift */,
+				A1B2C3D40000000000000005 /* HolmSearchField.swift */,
+				A1B2C3D40000000000000007 /* HolmBridgeDirectory.swift */,
+				A1B2C3D40000000000000009 /* HolmAddLinkSheet.swift */,
+				A1B2C3D40000000000000011 /* HolmLinkBrowserCoordinator.swift */,
+				A1B2C3D4000000000000000F /* HolmRailOrderSheet.swift */,
+				A1B2C3D4000000000000000D /* HolmLinkBrowser.swift */,
+				A1B2C3D4000000000000000B /* HolmLink.swift */,
+				A1B2C3D40000000000000001 /* HolmMarkView.swift */,
 				7EB58E4E8D6D634C246AD5C2 /* RoomInviterLabel.swift */,
 				839E2C35DF3F9C7B54C3CE49 /* RoundedCornerShape.swift */,
 				AEB5FF7A09B79B0C6B528F7C /* SFNumberedListView.swift */,
@@ -9212,6 +9239,15 @@
 				D55AF9B5B55FEED04771A461 /* RoomFlowCoordinator.swift in Sources */,
 				8DF0EBD97753033C715D716E /* RoomFlowCoordinatorStateMachine.swift in Sources */,
 				9C63171267E22FEB288EC860 /* RoomHeaderView.swift in Sources */,
+				A1B2C3D40000000000000004 /* HomeScreenSpaceBar.swift in Sources */,
+				A1B2C3D40000000000000006 /* HolmSearchField.swift in Sources */,
+				A1B2C3D40000000000000008 /* HolmBridgeDirectory.swift in Sources */,
+				A1B2C3D4000000000000000A /* HolmAddLinkSheet.swift in Sources */,
+				A1B2C3D40000000000000012 /* HolmLinkBrowserCoordinator.swift in Sources */,
+				A1B2C3D40000000000000010 /* HolmRailOrderSheet.swift in Sources */,
+				A1B2C3D4000000000000000E /* HolmLinkBrowser.swift in Sources */,
+				A1B2C3D4000000000000000C /* HolmLink.swift in Sources */,
+				A1B2C3D40000000000000002 /* HolmMarkView.swift in Sources */,
 				38E0F9A4CB5237F039A2EEE6 /* RoomHistorySharingState.swift in Sources */,
 				5C8804B4F25903516E2DAB81 /* RoomInfoProxy.swift in Sources */,
 				432EA37BDC97CEDBAB7B23A6 /* RoomInfoProxyProtocol.swift in Sources */,
@@ -10243,11 +10279,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				APP_DISPLAY_NAME = "Element X";
-				APP_GROUP_IDENTIFIER = group.io.element;
-				APP_NAME = ElementX;
+				APP_DISPLAY_NAME = "holm.chat";
+				APP_GROUP_IDENTIFIER = group.chat.holm;
+				APP_NAME = Holm;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "colors/accent-color";
-				BASE_BUNDLE_IDENTIFIER = io.element.elementx;
+				BASE_BUNDLE_IDENTIFIER = chat.holm.ios;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -10304,7 +10340,7 @@
 				MARKETING_VERSION = 26.09.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCTION_APP_NAME = Element;
+				PRODUCTION_APP_NAME = "holm.chat";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -10318,11 +10354,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				APP_DISPLAY_NAME = "Element X";
-				APP_GROUP_IDENTIFIER = group.io.element;
-				APP_NAME = ElementX;
+				APP_DISPLAY_NAME = "holm.chat";
+				APP_GROUP_IDENTIFIER = group.chat.holm;
+				APP_NAME = Holm;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "colors/accent-color";
-				BASE_BUNDLE_IDENTIFIER = io.element.elementx;
+				BASE_BUNDLE_IDENTIFIER = chat.holm.ios;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -10386,7 +10422,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCTION_APP_NAME = Element;
+				PRODUCTION_APP_NAME = "holm.chat";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;

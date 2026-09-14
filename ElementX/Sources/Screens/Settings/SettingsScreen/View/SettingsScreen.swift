@@ -20,7 +20,7 @@ struct SettingsScreen: View {
     }
     
     var body: some View {
-        Form {
+        List {
             userSection
             
             if context.viewState.showUserStatusInput {
@@ -41,7 +41,7 @@ struct SettingsScreen: View {
                 developerOptionsSection
             }
         }
-        .compoundList()
+        .compoundList(.plain)
         .navigationTitle(L10n.commonSettings)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(context.viewState.navigationBarVisibility, for: .navigationBar)
@@ -55,46 +55,61 @@ struct SettingsScreen: View {
         }
     }
     
+    /// A proper masthead rather than a list row: the avatar wears the seal, the name
+    /// sits under it, and the whole block is the tap target for editing your profile.
     private var userSection: some View {
         Section {
             ListRow(kind: .custom {
                 Button {
                     context.send(viewAction: .userDetails)
                 } label: {
-                    HStack(spacing: 12) {
+                    VStack(spacing: 14) {
                         LoadableAvatarImage(url: context.viewState.userProfile.avatarURL,
                                             name: context.viewState.userProfile.displayName,
                                             contentID: context.viewState.userProfile.id,
-                                            avatarSize: .user(on: .settings),
+                                            avatarSize: .user(on: .memberDetails),
                                             mediaProvider: context.mediaProvider)
+                            .padding(5)
+                            .overlay {
+                                Circle()
+                                    .stroke(AngularGradient(colors: [Self.gold.opacity(0.35), Self.gold,
+                                                                     Color.compound.iconAccentPrimary,
+                                                                     Self.gold.opacity(0.35)],
+                                                            center: .center),
+                                            lineWidth: 1.6)
+                            }
+                            .shadow(color: Self.gold.opacity(0.25), radius: 10)
                             .accessibilityHidden(true)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
+
+                        VStack(spacing: 4) {
                             HStack(spacing: 6) {
                                 Text(context.viewState.userProfile.displayName ?? "")
-                                
+
                                 if let statusEmoji = context.viewState.userProfile.status.displayed?.emoji {
                                     Text(String(statusEmoji))
                                 }
                             }
-                            .font(.compound.headingMD)
+                            .font(.compound.headingMDBold)
                             .foregroundColor(.compound.textPrimary)
-                            
+
                             Text(context.viewState.userProfile.id)
                                 .font(.compound.bodySM)
                                 .foregroundColor(.compound.textSecondary)
+
+                            Text(L10n.screenEditProfileTitle)
+                                .font(.compound.bodySMSemibold)
+                                .foregroundColor(.compound.textActionAccent)
+                                .padding(.top, 2)
                         }
-                        
-                        Spacer()
-                        
-                        ListRowAccessory.navigationLink
                     }
-                    .padding(.horizontal, ListRowPadding.horizontal)
-                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
                 }
             })
         }
     }
+
+    private static let gold = Color(red: 0.878, green: 0.702, blue: 0.396)
     
     private var userStatusSection: some View {
         Section {
@@ -130,6 +145,9 @@ struct SettingsScreen: View {
             default:
                 EmptyView()
             }
+        } header: {
+            Text(L10n.commonSecurity)
+                .compoundListSectionHeader()
         }
     }
     
@@ -202,6 +220,9 @@ struct SettingsScreen: View {
                         })
                         .accessibilityIdentifier(A11yIdentifiers.settingsScreen.analytics)
             }
+        } header: {
+            Text(L10n.settingsSectionApp)
+                .compoundListSectionHeader()
         }
     }
     
@@ -245,9 +266,6 @@ struct SettingsScreen: View {
     
     private var versionSection: some View {
         VStack(spacing: 0) {
-            versionText
-                .frame(maxWidth: .infinity)
-            
             if let deviceID = context.viewState.deviceID {
                 Text(deviceID)
             }
@@ -258,13 +276,6 @@ struct SettingsScreen: View {
         .onTapGesture(count: 7) {
             context.send(viewAction: .enableDeveloperOptions)
         }
-    }
-    
-    private var versionText: Text {
-        // Let's not snapshot a changing version string.
-        let shortVersion = ProcessInfo.isRunningTests ? "0.0.0" : InfoPlistReader.main.bundleShortVersionString
-        let version = ProcessInfo.isRunningTests ? "1" : InfoPlistReader.main.bundleVersion
-        return Text(L10n.settingsVersionNumber(shortVersion, version))
     }
     
     private var toolbar: some ToolbarContent {

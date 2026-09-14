@@ -16,6 +16,13 @@ public extension Font {
 /// A manual mapping of the Compound font styles to iOS styles. This will be
 /// generated directly from the style dictionary in the future.
 public struct CompoundFonts {
+    // Holm's type system: a serif display face (New York) carries every title and
+    // heading, paired with the system sans for body and UI copy. Deliberately
+    // unlike Compound's all-sans default.
+    private static func serif(_ style: Font.TextStyle, _ weight: Font.Weight) -> Font {
+        .system(style, design: .serif).weight(weight)
+    }
+
     public let bodyXS = Font.caption
     public let bodyXSSemibold = Font.caption.weight(.semibold)
     public let bodySM = Font.footnote
@@ -28,10 +35,10 @@ public struct CompoundFonts {
     public let headingSMSemibold = Font.title3.weight(.semibold)
     public let headingMD = Font.title2
     public let headingMDBold = Font.title2.bold()
-    public let headingLG = Font.title
-    public let headingLGBold = Font.title.bold()
-    public let headingXL = Font.largeTitle
-    public let headingXLBold = Font.largeTitle.bold()
+    public let headingLG = Font.title.weight(.light)
+    public let headingLGBold = Font.title.weight(.semibold)
+    public let headingXL = Font.largeTitle.weight(.light)
+    public let headingXLBold = Font.largeTitle.weight(.semibold)
 }
 
 public extension Font.TextStyle {

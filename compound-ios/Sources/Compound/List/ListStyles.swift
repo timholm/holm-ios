@@ -21,10 +21,11 @@ public extension View {
     func compoundList(_ kind: CompoundListKind = .inset) -> some View {
         switch kind {
         case .inset:
-            environment(\.defaultMinListRowHeight, 48)
+            // Flat lists on the canvas ground — no grouped-card backdrop.
+            environment(\.defaultMinListRowHeight, 52)
                 .scrollContentBackground(.hidden)
-                .background(Color.compound.bgSubtleSecondaryLevel0.ignoresSafeArea())
-                .preference(key: CompoundBackgroundPreferenceKey.self, value: .color(.compound.bgSubtleSecondaryLevel0))
+                .background(Color.compound.bgCanvasDefault.ignoresSafeArea())
+                .preference(key: CompoundBackgroundPreferenceKey.self, value: .default)
         case .plain:
             listStyle(.plain)
                 .environment(\.defaultMinListRowHeight, 48)
@@ -56,12 +57,9 @@ public extension View {
     
     // MARK: - Private
     
+    /// Sentence case, quiet — no tracked-out caps.
     private var headerFont: Font {
-        if #available(iOS 26.0, *) {
-            .compound.bodyMDSemibold
-        } else {
-            .compound.bodySM
-        }
+        .system(.subheadline).weight(.semibold)
     }
 }
 

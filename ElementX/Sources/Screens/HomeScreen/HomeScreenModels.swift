@@ -25,6 +25,9 @@ enum HomeScreenViewModelAction {
     case presentSettingsScreen
     case presentFeedbackScreen
     case presentStartChatScreen
+    case presentCreateSpaceScreen
+    case presentUserProfile(userID: String)
+    case presentLink(HolmLink)
     case logout
 }
 
@@ -37,6 +40,13 @@ enum HomeScreenViewAction {
     case reportRoom(roomIdentifier: String)
     case showSettings
     case startChat
+    case createSpace
+    case addLink(HolmLink)
+    case updateLink(HolmLink)
+    case removeLink(HolmLink)
+    case reorderRail([String])
+    case openLink(HolmLink)
+    case addBridge(userID: String)
     case setupRecovery
     case confirmRecoveryKey
     case resetEncryption
@@ -44,6 +54,7 @@ enum HomeScreenViewAction {
     case dismissNewSoundBanner
     case updateVisibleItemRange(Range<Int>)
     case spaceFilters
+    case selectSpaceFilter(SpaceServiceFilter?)
     case markRoomAsUnread(roomIdentifier: String)
     case markRoomAsRead(roomIdentifier: String)
     case markRoomAsFavourite(roomIdentifier: String, isFavourite: Bool)
@@ -111,7 +122,15 @@ struct HomeScreenViewState: BindableState {
     var reportRoomEnabled = false
     
     var shouldShowSpaceFilters = false
+    /// Every space the user belongs to, shown as a rail beside the chat list.
+    var spaceFilters: [SpaceServiceFilter] = []
     var selectedSpaceFilter: SpaceServiceFilter?
+    /// Spaces holding at least one unmuted room with something unread in it.
+    var unreadSpaceIDs: Set<String> = []
+    /// Websites pinned beside the spaces.
+    var links: [HolmLink] = []
+    /// The order the rail was dragged into, by item id.
+    var railOrder: [String] = []
     
     /// Inline room list search is disabled when the dedicated global search tab is shown instead (see `UserSessionFlowCoordinator`).
     var isRoomListSearchEnabled = true

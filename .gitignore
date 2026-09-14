@@ -19,6 +19,7 @@ DerivedData/
 .netrc
 
 build
+.build-sim
 /vendor/
 */xcshareddata/xcodecloud
 

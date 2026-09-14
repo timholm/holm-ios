@@ -11,14 +11,26 @@ import SwiftUI
 struct SeparatorRoomTimelineView: View {
     let timelineItem: SeparatorRoomTimelineItem
     
+    /// A date reads as an editorial rule with the day set into it, rather than
+    /// a bold word floating in the middle of the conversation.
     var body: some View {
-        Text(timelineItem.timestamp.formattedDateSeparator())
-            .font(.compound.bodySMSemibold)
-            .foregroundColor(.compound.textPrimary)
+        HStack(spacing: 12) {
+            line
+            Text(timelineItem.timestamp.formattedDateSeparator())
+                .font(.compound.bodyXS)
+                .foregroundColor(.compound.textSecondary)
+                .fixedSize()
+            line
+        }
+        .padding(.horizontal, 24.0)
+        .padding(.vertical, 14.0)
+    }
+
+    private var line: some View {
+        Rectangle()
+            .fill(Color.compound.borderInteractiveSecondary)
+            .frame(height: 1 / UIScreen.main.scale)
             .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 36.0)
-            .padding(.vertical, 8.0)
     }
 }
 

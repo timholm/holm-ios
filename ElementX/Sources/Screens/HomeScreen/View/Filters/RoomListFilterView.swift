@@ -34,7 +34,7 @@ private struct FilterToggleStyle: ToggleStyle {
     }
     
     func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 20)
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         configuration.label
             .font(.compound.bodyMD)
             .foregroundColor(foregroundColor(isOn: configuration.isOn))

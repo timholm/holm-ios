@@ -455,7 +455,12 @@ private struct NavigationTabCoordinatorView<Tag: Hashable>: View {
                 Tab(value: module.details.tag, role: module.details.isSearch ? .search : nil) {
                     module.coordinator?.toPresentable()
                         .id(module.id)
-                        .toolbar(module.details.barVisibility(in: horizontalSizeClass), for: .tabBar)
+                        // A single destination needs no bar to switch between — hide it
+                        // and give the whole screen back to the content.
+                        .toolbar(navigationTabCoordinator.tabModules.count > 1
+                                     ? module.details.barVisibility(in: horizontalSizeClass)
+                                     : .hidden,
+                                 for: .tabBar)
                 } label: {
                     Label {
                         Text(module.details.title)
@@ -471,11 +476,24 @@ private struct NavigationTabCoordinatorView<Tag: Hashable>: View {
     }
     
     private func configureAppearance(_ tabBarController: UITabBarController) {
-        standardAppearance.configureWithDefaultBackground()
-        standardAppearance.stackedLayoutAppearance.normal.badgeBackgroundColor = .compound.iconAccentPrimary // iPhone Portrait
-        standardAppearance.compactInlineLayoutAppearance.normal.badgeBackgroundColor = .compound.iconAccentPrimary // iPhone Landscape
-        standardAppearance.inlineLayoutAppearance.normal.badgeBackgroundColor = .compound.iconAccentPrimary // iPadOS 17 (doesn't work for 18+)
+        // Holm's bar sits flush on the ground rather than floating as a glass pill:
+        // an opaque ground, a hairline above it, and the accent reserved for what's selected.
+        standardAppearance.configureWithOpaqueBackground()
+        standardAppearance.backgroundColor = .compound.bgCanvasDefault
+        standardAppearance.shadowColor = .compound.borderInteractiveSecondary
+
+        for layout in [standardAppearance.stackedLayoutAppearance,
+                       standardAppearance.compactInlineLayoutAppearance,
+                       standardAppearance.inlineLayoutAppearance] {
+            layout.normal.badgeBackgroundColor = .compound.iconAccentPrimary
+            layout.normal.iconColor = .compound.iconTertiary
+            layout.normal.titleTextAttributes = [.foregroundColor: UIColor.compound.textSecondary]
+            layout.selected.iconColor = .compound.iconAccentPrimary
+            layout.selected.titleTextAttributes = [.foregroundColor: UIColor.compound.textActionAccent]
+        }
+
         tabBarController.tabBar.standardAppearance = standardAppearance
+        tabBarController.tabBar.scrollEdgeAppearance = standardAppearance
     }
 }
 

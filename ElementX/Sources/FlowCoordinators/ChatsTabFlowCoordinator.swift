@@ -40,6 +40,8 @@ class ChatsTabFlowCoordinator: FlowCoordinatorProtocol {
     private var encryptionResetFlowCoordinator: EncryptionResetFlowCoordinator?
     // periphery:ignore - retaining purpose
     private var startChatFlowCoordinator: StartChatFlowCoordinator?
+    /// Which door the next start-chat flow is opened through; reset once it launches.
+    private var pendingStartChatEntryPoint: StartChatFlowCoordinatorEntryPoint = .startChat
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -168,7 +170,7 @@ class ChatsTabFlowCoordinator: FlowCoordinatorProtocol {
             }
         case .chatBackupSettings:
             actionsSubject.send(.showChatBackupSettings)
-        case .accountProvisioningLink, .oAuthCallback, .settings, .call, .search:
+        case .accountProvisioningLink, .oAuthCallback, .settings, .call, .search, .spaces:
             break // These routes cannot be handled.
         }
     }
@@ -421,6 +423,17 @@ class ChatsTabFlowCoordinator: FlowCoordinatorProtocol {
                     stateMachine.processEvent(.startEncryptionResetFlow)
                 case .presentStartChatScreen:
                     stateMachine.processEvent(.startStartChatFlow)
+                case .presentUserProfile(let userID):
+                    // The bridge bot's own chat is where you sign the bridge in.
+                    handleAppRoute(.userProfile(userID: userID), animated: true)
+                case .presentLink(let link):
+                    // A pushed screen, so it arrives sideways and swipes back like a room.
+                    sidebarNavigationStackCoordinator.push(HolmLinkBrowserCoordinator(link: link,
+                                                                                      mediaProvider: userSession.mediaProvider))
+                case .presentCreateSpaceScreen:
+                    // Same flow, different door — it already knows how to make a space.
+                    pendingStartChatEntryPoint = .createSpace
+                    stateMachine.processEvent(.startStartChatFlow)
                 case .logout:
                     actionsSubject.send(.logout)
                 case .presentDeclineAndBlock(let userID, let roomID):
@@ -621,7 +634,9 @@ class ChatsTabFlowCoordinator: FlowCoordinatorProtocol {
     
     private func startStartChatFlow(animated: Bool) {
         let navigationStackCoordinator = NavigationStackCoordinator()
-        let coordinator = StartChatFlowCoordinator(entryPoint: .startChat,
+        let entryPoint = pendingStartChatEntryPoint
+        pendingStartChatEntryPoint = .startChat
+        let coordinator = StartChatFlowCoordinator(entryPoint: entryPoint,
                                                    userDiscoveryService: UserDiscoveryService(clientProxy: userSession.clientProxy),
                                                    navigationStackCoordinator: navigationStackCoordinator,
                                                    flowParameters: flowParameters)

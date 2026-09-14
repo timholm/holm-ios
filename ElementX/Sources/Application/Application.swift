@@ -6,7 +6,57 @@
 // Please see LICENSE files in the repository root for full details.
 //
 
+import Compound
 import SwiftUI
+
+/// Holm's brand palette, overriding Compound's default Element green wherever it's
+/// used as the app's accent (also doubles as the "success" colour upstream, so both
+/// are retinted together here — deliberately distinct from Element X's look).
+private enum HolmBrand {
+    /// Solarpunk: luminous teal as the living accent, gold reserved for the seal.
+    /// Everything sits on a deep ground so light has somewhere to fall.
+    static let subtle = Color(red: 0.098, green: 0.204, blue: 0.204)
+    static let subtleBg = Color(red: 0.055, green: 0.114, blue: 0.118)
+    static let mid = Color(red: 0.161, green: 0.529, blue: 0.514)
+    static let core = Color(red: 0.180, green: 0.769, blue: 0.714)
+    static let hovered = Color(red: 0.290, green: 0.855, blue: 0.796)
+    static let pressed = Color(red: 0.129, green: 0.612, blue: 0.573)
+    static let alphaLight = Color(red: 0.180, green: 0.769, blue: 0.714).opacity(0.14)
+
+    static func apply() {
+        let overrides: [KeyPath<CompoundColorTokens, Color>: Color] = [
+            \.bgAccentHovered: hovered,
+            \.bgAccentPressed: pressed,
+            \.bgAccentRest: core,
+            \.bgAccentSelected: alphaLight,
+            \.bgAccentSubtle: subtleBg,
+            \.bgBadgeAccent: subtle,
+            \.bgSuccessHovered: hovered,
+            \.bgSuccessPressed: pressed,
+            \.bgSuccessRest: core,
+            \.bgSuccessSubtle: subtleBg,
+            \.borderAccentPrimary: core,
+            \.borderAccentSubtle: mid,
+            \.borderSuccessPrimary: core,
+            \.borderSuccessSubtle: mid,
+            \.iconAccentPrimary: core,
+            \.iconAccentTertiary: mid,
+            \.iconSuccessPrimary: core,
+            \.textActionAccent: core,
+            \.textActionSuccess: core,
+            \.textBadgeAccent: hovered,
+            \.textSuccessPrimary: core,
+            \.gradientSubtleStop1: core.opacity(0.5),
+            \.gradientSubtleStop2: core.opacity(0.4),
+            \.gradientSubtleStop3: core.opacity(0.3),
+            \.gradientSubtleStop4: core.opacity(0.2),
+            \.gradientSubtleStop5: core.opacity(0.1)
+        ]
+        for (keyPath, color) in overrides {
+            Color.compound.override(keyPath, with: color)
+        }
+    }
+}
 
 @main
 struct Application: App {
@@ -15,10 +65,12 @@ struct Application: App {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(\.displayScale) private var displayScale
-    
+
     private var appCoordinator: AppCoordinatorProtocol!
-    
+
     init() {
+        HolmBrand.apply()
+
         if ProcessInfo.isRunningUITests {
             appCoordinator = UITestsAppCoordinator(appDelegate: appDelegate)
         } else if ProcessInfo.isRunningUnitTests {

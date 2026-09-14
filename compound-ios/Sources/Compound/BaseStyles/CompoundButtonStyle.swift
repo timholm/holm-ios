@@ -119,39 +119,45 @@ public struct CompoundButtonStyle: ButtonStyle {
             .contentShape(contentShape)
     }
     
+    /// Holm's button shape: a squared-off rounded rect, deliberately distinct from
+    /// Compound's default capsule/pill buttons used throughout Element X.
+    private var holmShape: some InsettableShape {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+    }
+
     @ViewBuilder
     private func makeBackground(configuration: Self.Configuration) -> some View {
         switch kind {
         case .super:
             if isEnabled {
                 ZStack {
-                    Capsule().fill(.compound.bgCanvasDefault)
-                    Capsule().fill(LinearGradient(gradient: .compound.action,
+                    holmShape.fill(.compound.bgCanvasDefault)
+                    holmShape.fill(LinearGradient(gradient: .compound.action,
                                                   startPoint: .top, endPoint: .bottom))
                         .opacity(0.04)
-                    Capsule().strokeBorder(LinearGradient(gradient: .compound.action,
+                    holmShape.strokeBorder(LinearGradient(gradient: .compound.action,
                                                           startPoint: .top, endPoint: .bottom))
                 }
                 .compositingGroup()
                 .opacity(configuration.isPressed ? pressedOpacity : 1)
             } else {
-                Capsule().strokeBorder(strokeColor(configuration: configuration))
+                holmShape.strokeBorder(strokeColor(configuration: configuration))
             }
         case .primary:
-            Capsule().fill(fillColor(configuration: configuration))
+            holmShape.fill(fillColor(configuration: configuration))
         case .secondary:
-            Capsule().strokeBorder(strokeColor(configuration: configuration))
+            holmShape.strokeBorder(strokeColor(configuration: configuration))
         case .tertiary:
             EmptyView()
         case .textLink:
             EmptyView()
         }
     }
-    
+
     private var contentShape: AnyShape {
         switch kind {
         case .super, .primary, .secondary, .tertiary:
-            return AnyShape(Capsule())
+            return AnyShape(holmShape)
         case .textLink:
             return AnyShape(Rectangle())
         }

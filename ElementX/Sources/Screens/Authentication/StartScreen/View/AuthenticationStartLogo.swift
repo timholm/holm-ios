@@ -32,20 +32,16 @@ struct AuthenticationStartLogo: View {
         }
     }
     
+    /// The real wordmark: a speech bubble outline around "holm". It's a template
+    /// image (transparent, single-colour line art) so it can sit in white on the
+    /// dark auth gradient and in the primary label colour anywhere else.
     var body: some View {
-        if let sizeMetrics {
-            appLogoImage
-                .resizable()
-                .frame(width: sizeMetrics.imageSize, height: sizeMetrics.imageSize)
-                .modifier(AuthenticationBrandLogoModifier(scale: sizeMetrics.scale,
-                                                          hideBrandChrome: hideBrandChrome,
-                                                          isOnGradient: isOnGradient))
-        } else {
-            appLogoImage
-                .modifier(AuthenticationBrandLogoModifier(scale: 1,
-                                                          hideBrandChrome: hideBrandChrome,
-                                                          isOnGradient: isOnGradient))
-        }
+        appLogoImage
+            .renderingMode(.template)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .foregroundStyle(isOnGradient ? .white : Color.compound.textPrimary)
+            .frame(width: sizeMetrics?.imageSize ?? 148, height: sizeMetrics?.imageSize ?? 148)
     }
 }
 
@@ -84,69 +80,11 @@ private struct AuthenticationBrandLogoModifier: ViewModifier {
         }
     }
     
+    /// Holm's mark stands on its own — no card, border or glass chrome. The serif
+    /// monogram floats directly on the gradient with only a soft shadow for depth.
     private func styledContent(_ content: Content) -> some View {
         content
-            .background {
-                Circle()
-                    .inset(by: 1 * scale)
-                    .shadow(color: .black.opacity(!isLight && isOnGradient ? 0.3 : 0.4),
-                            radius: 12.57143 * scale,
-                            y: 6.28571 * scale)
-                
-                Circle()
-                    .inset(by: 1 * scale)
-                    .shadow(color: .black.opacity(0.5),
-                            radius: 12.57143 * scale,
-                            y: 6.28571 * scale)
-                    .blendMode(.overlay)
-            }
-            .padding(24 * scale)
-            .background {
-                Color.white
-                    .opacity(isLight ? 0.23 : isOnGradient ? 0.05 : 0.13)
-            }
-            .clipShape(outerShape)
-            .overlay {
-                outerShape
-                    .inset(by: 0.25 * scale)
-                    .stroke(.white.opacity(isLight ? 1 : isOnGradient ? 0.9 : 0.25), lineWidth: 0.5 * scale)
-                    .blendMode(isLight ? .normal : .overlay)
-            }
-            .padding(extra)
-            .background {
-                ZStack {
-                    if !isLight, isOnGradient {
-                        outerShape
-                            .inset(by: 1 * scale)
-                            .padding(extra)
-                            .shadow(color: .black.opacity(0.5),
-                                    radius: 32.91666 * scale,
-                                    y: 1.05333 * scale)
-                    } else {
-                        outerShape
-                            .inset(by: 1 * scale)
-                            .padding(extra)
-                            .shadow(color: outerShapeShadowColor.opacity(isLight ? 0.23 : 0.08),
-                                    radius: 16 * scale,
-                                    y: 8 * scale)
-                        
-                        outerShape
-                            .inset(by: 1 * scale)
-                            .padding(extra)
-                            .shadow(color: outerShapeShadowColor.opacity(0.5),
-                                    radius: 16 * scale,
-                                    y: 8 * scale)
-                            .blendMode(.overlay)
-                    }
-                }
-                .mask {
-                    outerShape
-                        .inset(by: -extra / 2)
-                        .stroke(lineWidth: extra)
-                        .padding(extra)
-                }
-            }
-            .padding(-extra)
+            .shadow(color: .black.opacity(0.45), radius: 24 * scale, y: 8 * scale)
             .accessibilityHidden(true)
     }
 }

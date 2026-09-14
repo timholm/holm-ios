@@ -38,10 +38,10 @@ private struct TimelineItemBubbleBackgroundModifier: ViewModifier {
         content
             .padding(insets)
             .background(color)
-            .cornerRadius(12, corners: roundedCorners)
+            .cornerRadius(8, corners: roundedCorners)
             .overlay {
                 if let borderColor {
-                    RoundedCornerShape(radius: 12, corners: roundedCorners)
+                    RoundedCornerShape(radius: 8, corners: roundedCorners)
                         .stroke(borderColor)
                 }
             }

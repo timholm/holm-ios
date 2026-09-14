@@ -43,60 +43,52 @@ struct HomeScreenRecoveryKeyConfirmationBanner: View {
         }
     }
     
+    /// A quiet single-line notice rather than a card: an accent rule, one line of
+    /// text, and an inline action. It reads as part of the list, not stacked on top of it.
     var body: some View {
-        VStack(spacing: 16) {
-            content
-            buttons
-        }
-        .padding(16)
-        .background(Color.compound.bgSubtleSecondary)
-        .cornerRadius(14)
-        .padding(.horizontal, 16)
-    }
-    
-    var content: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .center, spacing: 16) {
+        HStack(alignment: .center, spacing: 14) {
+            Rectangle()
+                .fill(Color.compound.iconAccentPrimary)
+                .frame(width: 2)
+                .frame(maxHeight: .infinity)
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.compound.bodyLGSemibold)
+                    .font(.compound.bodyMDSemibold)
                     .foregroundColor(.compound.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                if state == .setUpRecovery {
-                    Button {
-                        context.send(viewAction: .skipRecoveryKeyConfirmation)
-                    } label: {
-                        CompoundIcon(\.close, size: .medium, relativeTo: .compound.bodyLGSemibold)
-                            .foregroundColor(.compound.iconSecondary)
-                    }
-                }
+
+                Text(message)
+                    .font(.compound.bodySM)
+                    .foregroundColor(.compound.textSecondary)
+                    .lineLimit(2)
             }
-            
-            Text(message)
-                .font(.compound.bodyMD)
-                .foregroundColor(.compound.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            actions
         }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .fixedSize(horizontal: false, vertical: true)
     }
-    
-    var buttons: some View {
-        VStack(spacing: 16) {
+
+    private var actions: some View {
+        HStack(spacing: 14) {
             Button {
                 context.send(viewAction: primaryAction)
             } label: {
                 Text(actionTitle)
-                    .frame(maxWidth: .infinity)
+                    .font(.compound.bodySMSemibold)
+                    .foregroundColor(.compound.textActionAccent)
             }
-            .buttonStyle(.compound(.primary, size: .medium))
             .accessibilityIdentifier(A11yIdentifiers.homeScreen.recoveryKeyConfirmationBannerContinue)
-            
-            if state == .recoveryOutOfSync {
+
+            if state == .setUpRecovery {
                 Button {
-                    context.send(viewAction: .resetEncryption)
+                    context.send(viewAction: .skipRecoveryKeyConfirmation)
                 } label: {
-                    Text(L10n.confirmRecoveryKeyBannerSecondaryButtonTitle)
-                        .frame(maxWidth: .infinity)
+                    CompoundIcon(\.close, size: .small, relativeTo: .compound.bodySM)
+                        .foregroundColor(.compound.iconTertiary)
                 }
-                .buttonStyle(.compound(.tertiary, size: .medium))
             }
         }
     }
