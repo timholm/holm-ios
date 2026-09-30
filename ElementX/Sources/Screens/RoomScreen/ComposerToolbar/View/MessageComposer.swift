@@ -205,9 +205,9 @@ private struct MessageComposerStyleModifier<Header: View>: ViewModifier {
     
     let header: Header
     
-    /// Squared off to match every other control in the app, rather than the
-    /// pill shape Compound ships.
-    private let composerShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+    /// A generous continuous corner so the composer reads as one soft, floating
+    /// bar rather than a squared-off control — the chat-app look.
+    private let composerShape = RoundedRectangle(cornerRadius: 20, style: .continuous)
     
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {

@@ -68,7 +68,7 @@ struct TimelineItemBubbledStylerView<Content: View>: View {
             
             bubble
         }
-        .padding(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))
+        .padding(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
         .background(isSelected ? Color.compound.bgAccentSelected : .clear)
         .highlightedTimelineItem(isFocussed)
         .overlay { selectionOverlay }
@@ -123,7 +123,7 @@ struct TimelineItemBubbledStylerView<Content: View>: View {
                         }
                         TimelineItemStatusView(timelineItem: timelineItem, adjustedDeliveryStatus: adjustedDeliveryStatus)
                             .environmentObject(context)
-                            .padding(.top, 8)
+                            .padding(.top, 4)
                             .padding(.bottom, 3)
                     }
                 }
@@ -334,7 +334,7 @@ private extension EventBasedTimelineItemProtocol {
     /// The insets for the full bubble content.
     /// Padding affecting just the "send info" should be added inside `TimelineItemSendInfoView`
     func bubbleInsets(hasContentScanningFailure: Bool) -> EdgeInsets {
-        let defaultInsets: EdgeInsets = .init(around: 8)
+        let defaultInsets: EdgeInsets = .init(top: 10, leading: 14, bottom: 10, trailing: 14)
         
         // The content scanner failure placeholder is always rendered inset within the critical bubble.
         if hasContentScanningFailure {

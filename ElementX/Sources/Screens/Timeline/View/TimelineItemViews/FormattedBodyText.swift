@@ -19,6 +19,11 @@ struct FormattedBodyText: View {
         // Equivalent to compound's bodyLG
         container.font = UIFont.preferredFont(forTextStyle: .body)
         container.foregroundColor = UIColor.compound.textPrimary
+        // A touch of extra leading keeps multi-line messages airy without
+        // touching the sizes of headings, quotes or code blocks.
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 3
+        container.paragraphStyle = paragraphStyle
         return container
     }()
     

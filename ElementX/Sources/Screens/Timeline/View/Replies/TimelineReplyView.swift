@@ -286,7 +286,7 @@ private extension View {
                           maxWidth: CGFloat? = nil,
                           backgroundColor: Color,
                           borderColor: Color) -> some View {
-        let backgroundShape = RoundedRectangle(cornerRadius: 8)
+        let backgroundShape = RoundedRectangle(cornerRadius: 14, style: .continuous)
         return fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: maxWidth, alignment: .leading)
             .padding(padding)

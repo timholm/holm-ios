@@ -12,11 +12,11 @@ import SwiftUI
 extension View {
     /// - Parameters:
     ///   - isOutgoing: rounds the corners according to the side it shows on, defaults to true
-    ///   - insets: defaults to what we use for file timeline items, text uses custom values
+    ///   - insets: defaults to the comfortable padding used for text bubbles
     ///   - color: self explanatory, defaults to subtle secondary
     ///   - borderColor: an optional colour for a border around the bubble
     func bubbleBackground(isOutgoing: Bool = true,
-                          insets: EdgeInsets = .init(top: 8, leading: 12, bottom: 8, trailing: 12),
+                          insets: EdgeInsets = .init(top: 10, leading: 14, bottom: 10, trailing: 14),
                           color: @autoclosure @MainActor () -> Color? = .compound.bgSubtleSecondary,
                           borderColor: @autoclosure @MainActor () -> Color? = nil) -> some View {
         modifier(TimelineItemBubbleBackgroundModifier(isOutgoing: isOutgoing,
@@ -34,14 +34,17 @@ private struct TimelineItemBubbleBackgroundModifier: ViewModifier {
     var color: Color?
     var borderColor: Color?
     
+    /// Soft, modern bubble corners, larger than Compound's default for a friendlier chat feel.
+    private let bubbleCornerRadius: CGFloat = 18
+    
     func body(content: Content) -> some View {
         content
             .padding(insets)
             .background(color)
-            .cornerRadius(8, corners: roundedCorners)
+            .cornerRadius(bubbleCornerRadius, corners: roundedCorners)
             .overlay {
                 if let borderColor {
-                    RoundedCornerShape(radius: 8, corners: roundedCorners)
+                    RoundedCornerShape(radius: bubbleCornerRadius, corners: roundedCorners)
                         .stroke(borderColor)
                 }
             }
