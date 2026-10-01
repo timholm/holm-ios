@@ -129,6 +129,11 @@ struct RoomScreen: View {
             }
             .track(screen: .Room)
             .sentryTrace("\(Self.self)")
+            .onAppear {
+                // First paint: kick off everything that was deferred off the
+                // critical path (crypto warmup, pinned-events timeline).
+                context.send(viewAction: .roomAppeared)
+            }
     }
     
     private var liveLocationBanner: some View {
@@ -419,3 +424,4 @@ struct RoomScreen_Previews: PreviewProvider, TestablePreview {
         let timeline: TimelineViewModelProtocol
     }
 }
+
