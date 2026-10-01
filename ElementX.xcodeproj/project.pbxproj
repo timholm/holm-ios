@@ -1611,6 +1611,12 @@
 		FF9C06BBF6AC6F1CFFBEBFFC /* target.yml in Resources */ = {isa = PBXBuildFile; fileRef = 90791B9C739C716A40E1B230 /* target.yml */; };
 		FFD52DCDA6962055A363CC8F /* IdentityResetHandleSDKMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EFB1D29B0870AFB6A56E9B8 /* IdentityResetHandleSDKMock.swift */; };
 		FFDF5C43A6A25E54F3FF4CC8 /* test_apple_image.heic in Resources */ = {isa = PBXBuildFile; fileRef = 9C5639C7D679F094E7AB6B04 /* test_apple_image.heic */; };
+		DD9BB301AC2E405981CBA63E /* BoundedCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4531CA29AFFA4AE2AFE3DDF5 /* BoundedCache.swift */; };
+		2866EE8CF0F74CB5A89415FE /* BoundedCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4531CA29AFFA4AE2AFE3DDF5 /* BoundedCache.swift */; };
+		FA674FB402BC4BF981CB165F /* MemoryPressureResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A420C1D572FA461C8CB7ED06 /* MemoryPressureResponder.swift */; };
+		9CAE4618644C42668B30A44D /* MemoryPressureResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A420C1D572FA461C8CB7ED06 /* MemoryPressureResponder.swift */; };
+		39D111879614482FB83CB088 /* WeakBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE72FD69E4D488AAF28CDDD /* WeakBox.swift */; };
+		348BF1B1FF5A45E4B980297D /* WeakBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE72FD69E4D488AAF28CDDD /* WeakBox.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -3264,6 +3270,9 @@
 		FEC4B431B0117BDEE697DB4A /* ComposerDisabledView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDisabledView.swift; sourceTree = "<group>"; };
 		FF720BA68256297680980481 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		FFECCE59967018204876D0A5 /* LocationMarkerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationMarkerView.swift; sourceTree = "<group>"; };
+		4531CA29AFFA4AE2AFE3DDF5 /* BoundedCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedCache.swift; sourceTree = "<group>"; };
+		A420C1D572FA461C8CB7ED06 /* MemoryPressureResponder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPressureResponder.swift; sourceTree = "<group>"; };
+		BCE72FD69E4D488AAF28CDDD /* WeakBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeakBox.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -6593,6 +6602,7 @@
 				815092CE45A84D67A6CC7EA1 /* NetworkMonitor */,
 				9C4193C4524B35FD6B94B5A9 /* Pills */,
 				25852CD5316875417111E5CA /* Progress */,
+				6A5C34D1251A44B1B1E3F8C6 /* Stability */,
 				052CC920F473C10B509F9FC1 /* SwiftUI */,
 				35784B4A763838C0324B324A /* TestablePreview */,
 				B687E3E8C23415A06A3D5C65 /* UserIndicator */,
@@ -7468,6 +7478,24 @@
 			path = JoinRoomScreen;
 			sourceTree = "<group>";
 		};
+		6A5C34D1251A44B1B1E3F8C6 /* Stability */ = {
+			isa = PBXGroup;
+			children = (
+				E88E593EB4A44D17AB14E823 /* Memory */,
+			);
+			path = Stability;
+			sourceTree = "<group>";
+		};
+		E88E593EB4A44D17AB14E823 /* Memory */ = {
+			isa = PBXGroup;
+			children = (
+				4531CA29AFFA4AE2AFE3DDF5 /* BoundedCache.swift */,
+				A420C1D572FA461C8CB7ED06 /* MemoryPressureResponder.swift */,
+				BCE72FD69E4D488AAF28CDDD /* WeakBox.swift */,
+			);
+			path = Memory;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -8203,6 +8231,7 @@
 				D2CBC380FEBCBF29263B8446 /* AudioPlaybackSpeed.swift in Sources */,
 				F255083E18CDBFDF7E640FB1 /* Avatars.swift in Sources */,
 				A8E324E700E596E36B0A311B /* BootDetectionManager.swift in Sources */,
+				2866EE8CF0F74CB5A89415FE /* BoundedCache.swift in Sources */,
 				9A3B0CDF097E3838FB1B9595 /* Bundle.swift in Sources */,
 				9295F1F5E04484E10780BCE8 /* CharacterSet.swift in Sources */,
 				DA6E57CB533213D438001A31 /* ClientFactory.swift in Sources */,
@@ -8234,6 +8263,7 @@
 				9DD5AA10E85137140FEA86A3 /* MediaProvider.swift in Sources */,
 				7A642EE5F1ADC5D520F21924 /* MediaProviderProtocol.swift in Sources */,
 				E2DB696117BAEABAD5718023 /* MediaSourceProxy.swift in Sources */,
+				9CAE4618644C42668B30A44D /* MemoryPressureResponder.swift in Sources */,
 				4CB30D9BD72CA3FEEFAA0793 /* NSEUserSession.swift in Sources */,
 				1D5DC685CED904386C89B7DA /* NSRegularExpresion.swift in Sources */,
 				4DEEFB73181C3B023DB42686 /* NetworkMonitorProtocol.swift in Sources */,
@@ -8277,6 +8307,7 @@
 				34357B287357BC0B9715DD51 /* UserAgentBuilder.swift in Sources */,
 				1B1404DD4BB2C5079B074210 /* UserDefaultsProtocol.swift in Sources */,
 				28A494A66D0F21EC1EC4EB11 /* VolatileUserDefaults.swift in Sources */,
+				348BF1B1FF5A45E4B980297D /* WeakBox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -8666,6 +8697,7 @@
 				B6DF6B6FA8734B70F9BF261E /* BlurHashDecode.swift in Sources */,
 				E794AB6ABE1FF5AF0573FEA1 /* BlurHashEncode.swift in Sources */,
 				1C6B2A1A5A9699DD4C9755B3 /* BootDetectionManager.swift in Sources */,
+				DD9BB301AC2E405981CBA63E /* BoundedCache.swift in Sources */,
 				A8FA7671948E3DF27F320026 /* BugReportFlowCoordinator.swift in Sources */,
 				F4C005F006FC3657B9F0A31D /* BugReportHook.swift in Sources */,
 				6AD722DD92E465E56D2885AB /* BugReportScreen.swift in Sources */,
@@ -9039,6 +9071,7 @@
 				A969147E0EEE0E27EE226570 /* MediaUploadPreviewScreenViewModel.swift in Sources */,
 				9B872FF37DBE6BE054903831 /* MediaUploadPreviewScreenViewModelProtocol.swift in Sources */,
 				8A0BD60CA4A6004DB06B5403 /* MediaUploadingPreprocessor.swift in Sources */,
+				FA674FB402BC4BF981CB165F /* MemoryPressureResponder.swift in Sources */,
 				8C706DA7EAC0974CA2F8F1CD /* MentionBuilder.swift in Sources */,
 				F669B55BC237CDA5EC9332FE /* MentionSuggestionItemView.swift in Sources */,
 				64AB99285DC4437C0DDE9585 /* MenuSheetLabelStyle.swift in Sources */,
@@ -9663,6 +9696,7 @@
 				CA12AE0DCD57D49CD96C699A /* WaveformCursorView.swift in Sources */,
 				63CDC201A5980F304F6D0A1C /* WaveformInteractionModifier.swift in Sources */,
 				B773ACD8881DB18E876D950C /* WaveformSource.swift in Sources */,
+				39D111879614482FB83CB088 /* WeakBox.swift in Sources */,
 				08CB4BD12CEEDE6AAE4A18DD /* WindowManager.swift in Sources */,
 				AE5AAD9E32511544FDFA5560 /* WindowManagerProtocol.swift in Sources */,
 			);
