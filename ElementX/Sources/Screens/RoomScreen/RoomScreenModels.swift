@@ -22,9 +22,13 @@ enum RoomScreenViewModelAction: Equatable {
     case displayMessageForwarding(MessageForwardingItem)
     case stopLiveLocationSharing
     case displayLiveLocation
+    /// SwiftUI rendered the room for the first time; ends the `room_open` signpost interval.
+    case roomFirstPaint
 }
 
 enum RoomScreenViewAction {
+    /// Sent from RoomScreen.onAppear: first paint happened, start background phases.
+    case roomAppeared
     case tappedPinnedEventsBanner
     case viewAllPins
     case displayRoomDetails
@@ -272,3 +276,4 @@ struct PinnedEventsState: Equatable {
         }
     }
 }
+

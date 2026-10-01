@@ -183,7 +183,10 @@ nonisolated struct CollapsibleReactionLayout: Layout {
     }
     
     private func ensureCollapseAndAddMoreButtonsAreOnTheSameRow(_ rows: inout [[FlowLayoutSubview]]) {
-        guard var lastRow = rows.last, lastRow.count == 1 else {
+        // rows.count >= 2: rows[rows.count - 2] below would trap on a single
+        // row, which the view hierarchy should never produce but layout code
+        // must not assume.
+        guard var lastRow = rows.last, lastRow.count == 1, rows.count >= 2 else {
             return
         }
         var secondLastRow = rows[rows.count - 2]

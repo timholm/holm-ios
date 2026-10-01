@@ -203,6 +203,13 @@ class ClientProxy: ClientProxyProtocol {
     
     private let sendQueueStatusSubject = CurrentValueSubject<Bool, Never>(false)
     
+    /// Consecutive send-queue failures without a successful send in between. Drives the re-enable backoff.
+    private var consecutiveSendQueueFailures = 0
+    
+    /// Serialises send-queue re-enable attempts so a persistently failing queue backs off
+    /// instead of retrying on every status emission.
+    private var sendQueueReenableTask: Task<Void, Never>?
+    
     init(client: ClientProtocol,
          networkMonitor: NetworkMonitorProtocol,
          appSettings: AppSettings,
@@ -442,19 +449,64 @@ class ClientProxy: ClientProxyProtocol {
     /// loop that was triggered by trying to sync a signed out session.
     @CancellableTask private var restartTask: Task<Void, Never>?
     
+    /// Consecutive sync errors without a healthy sync in between. Drives the restart backoff so a
+    /// persistently failing homeserver doesn't spin the sync loop (and the logs) without bound.
+    private var consecutiveSyncErrors = 0
+    
     private func restartServices() {
         guard restartTask == nil else { return }
         
+        // Don't resurrect the sync loop when the services are meant to be suspended (e.g. the app
+        // backgrounded after the error was reported but before the restart fired).
+        guard case .running = desiredServiceState else {
+            MXLog.info("Ignoring sync restart, services are suspended.")
+            return
+        }
+        
+        consecutiveSyncErrors += 1
+        let delay = RetryPolicy.delayBeforeRetry(attempt: consecutiveSyncErrors)
+        MXLog.info("Scheduling sync restart after \(consecutiveSyncErrors) consecutive sync errors.")
+        
         restartTask = Task { [weak self] in
             do {
-                // Until the SDK can tell us the failure, we add a small
-                // delay to avoid generating multi-gigabyte log files.
-                try await Task.sleep(for: .milliseconds(250))
+                // Until the SDK can tell us the failure, back off exponentially (with jitter)
+                // to avoid generating multi-gigabyte log files on persistent failures.
+                try await Task.sleep(for: delay)
                 await self?.resumeServices()
             } catch {
                 MXLog.error("Restart cancelled.")
             }
             self?.restartTask = nil
+        }
+    }
+    
+    /// Re-enables all send queues, backing off when failures arrive back-to-back. The first attempt
+    /// stays immediate to preserve the existing resume behaviour; only repeated consecutive failures wait.
+    private func scheduleSendQueueReenable(client: ClientProtocol) {
+        sendQueueReenableTask?.cancel()
+        
+        consecutiveSendQueueFailures += 1
+        let delay: Duration = consecutiveSendQueueFailures == 1
+            ? .zero
+            : RetryPolicy.delayBeforeRetry(attempt: consecutiveSendQueueFailures - 1,
+                                           baseDelay: .seconds(2),
+                                           maxDelay: .seconds(300))
+        
+        MXLog.info("Scheduling send queue re-enable after \(consecutiveSendQueueFailures) consecutive failures.")
+        
+        sendQueueReenableTask = Task { [weak self, client] in
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return // Superseded by a newer attempt or torn down.
+            }
+            
+            // Don't touch the SDK once the proxy is gone (e.g. during logout teardown).
+            guard self != nil else { return }
+            
+            MXLog.info("Enabling all send queues")
+            await client.enableAllSendQueues(enable: true)
+            self?.sendQueueReenableTask = nil
         }
     }
     
@@ -464,6 +516,11 @@ class ClientProxy: ClientProxyProtocol {
         if restartTask != nil {
             restartTask = nil
         }
+        
+        // A pending send queue re-enable must not fire while suspended; it would
+        // generate network activity in the window we paused to keep quiet.
+        sendQueueReenableTask?.cancel()
+        sendQueueReenableTask = nil
         
         await transitionServices(to: .suspended).value
     }
@@ -1088,12 +1145,14 @@ class ClientProxy: ClientProxyProtocol {
             self?.sendQueueStatusSubject.send(false)
         })
         
-        sendQueueUpdatesListenerTaskHandle = try? await client.subscribeToSendQueueUpdates(listener: SDKListener.onMainActor { [analyticsService] _, update in
+        sendQueueUpdatesListenerTaskHandle = try? await client.subscribeToSendQueueUpdates(listener: SDKListener.onMainActor { [weak self, analyticsService] _, update in
             switch update {
             case .newLocalEvent(let transactionID):
                 analyticsService.signpost.startTransaction(.sendMessage(uuid: transactionID))
             case .sentEvent(let transactionID, _):
                 analyticsService.signpost.finishTransaction(.sendMessage(uuid: transactionID))
+                // A successful send breaks the failure streak; reset the re-enable backoff.
+                self?.consecutiveSendQueueFailures = 0
             default:
                 break
             }
@@ -1105,14 +1164,15 @@ class ClientProxy: ClientProxyProtocol {
             .sink { [weak self, client] enabled, reachability in
                 MXLog.info("Send queue status changed to enabled: \(enabled), homeserver reachability: \(reachability)")
                 
+                guard let self else { return }
+                
                 // Don't restart the send queue unless the client is meant to be running; doing so while
                 // suspended would generate network activity in the window we paused to keep quiet.
-                if enabled == false, reachability == .reachable, case .running = self?.desiredServiceState {
-                    MXLog.info("Enabling all send queues")
-                    Task {
-                        await client.enableAllSendQueues(enable: true)
-                    }
+                guard enabled == false, reachability == .reachable, case .running = self.desiredServiceState else {
+                    return
                 }
+                
+                self.scheduleSendQueueReenable(client: client)
             }
             .store(in: &cancellables)
         
@@ -1176,6 +1236,10 @@ class ClientProxy: ClientProxyProtocol {
             // To avoid the cache being invalidated while the app is backgrounded, we cache at every sync start.
             // Fire and forget as it might hit the network.
             Task { await cacheAccountURL() }
+            
+            // A resume starts a fresh streak so the nudge below re-enables the queues immediately;
+            // only failures from here on back off.
+            consecutiveSendQueueFailures = 0
             
             // Nudge the send queue listener to re-evaluate now that we're running; a resume doesn't otherwise
             // emit, and the SDK only re-enables queues when client.resume() runs (gated behind the flag).
@@ -1269,6 +1333,8 @@ class ClientProxy: ClientProxyProtocol {
             if case .error = state {
                 restartServices()
             } else {
+                // Any non-error state means the service recovered; reset the restart backoff.
+                consecutiveSyncErrors = 0
                 updateHomeserverReachability()
             }
         })

@@ -12,8 +12,22 @@ import Kingfisher
 nonisolated extension ImageCache {
     static var onlyInMemory: ImageCache {
         let result = ImageCache.default
+        // Bound the in-memory image cache: without explicit limits decoded images
+        // accumulate until the OS jetsams the app. NSCache still evicts under
+        // pressure on its own, but explicit limits keep steady-state memory
+        // predictable (track: ios-stability-memory).
+        result.memoryStorage.config.countLimit = 300
+        result.memoryStorage.config.totalCostLimit = 150 * 1024 * 1024
         result.memoryStorage.config.keepWhenEnteringBackground = true
         result.diskStorage.config.sizeLimit = 1
+        
+        // Purge decoded images on memory warning instead of waiting for jetsam.
+        // Registered by id so repeated evaluations (one per session setup) replace
+        // rather than duplicate the trim action.
+        MemoryPressureResponder.shared.registerTrimAction(id: "kingfisher-image-memory-cache") { [weak result] in
+            result?.clearMemoryCache()
+        }
+        
         return result
     }
     

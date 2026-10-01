@@ -127,6 +127,7 @@ struct TimelineThreadSummaryView: View {
     
     private struct ThreadView: View {
         @EnvironmentObject private var context: TimelineViewModel.Context
+        @State private var previewCache = MessagePreviewCache()
         
         let senderID: String
         let sender: TimelineItemSender?
@@ -156,7 +157,7 @@ struct TimelineThreadSummaryView: View {
                     .foregroundColor(.compound.textPrimary)
                     .accessibilityLabel(L10n.commonInReplyTo(sender?.disambiguatedDisplayName ?? senderID))
                 
-                Text(context.viewState.buildMessagePreview(formattedBody: formattedBody, plainBody: plainBody))
+                Text(previewCache.preview(for: context.viewState, formattedBody: formattedBody, plainBody: plainBody))
                     .font(.compound.bodyXS)
                     .foregroundColor(.compound.textSecondary)
             }

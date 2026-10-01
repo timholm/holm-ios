@@ -274,7 +274,7 @@ enum TimelineAlertInfoType: Hashable {
     case unknown
 }
 
-struct RoomMemberState {
+struct RoomMemberState: Equatable {
     let displayName: String?
     let avatarURL: URL?
     let status: UserStatus

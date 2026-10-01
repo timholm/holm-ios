@@ -24,6 +24,11 @@ class RoomScreenViewModel: RoomScreenViewModelType, RoomScreenViewModelProtocol 
     private var initialSelectedPinnedEventID: String?
     private let pinnedEventStringBuilder: RoomEventStringBuilder
     
+    /// Gates everything that must not run before first paint (crypto warmup,
+    /// pinned-events timeline). Set by `startBackgroundPhases()`, triggered
+    /// once from `RoomScreen.onAppear`.
+    private var backgroundPhasesStarted = false
+    
     private var identityPinningViolations = [String: RoomMemberProxyProtocol]()
     private var identityVerificationViolations = [String: RoomMemberProxyProtocol]()
     
@@ -58,6 +63,11 @@ class RoomScreenViewModel: RoomScreenViewModelType, RoomScreenViewModelProtocol 
          appHooks: AppHooks,
          analyticsService: AnalyticsServiceProtocol,
          userIndicatorController: UserIndicatorControllerProtocol) {
+        // Cache read: everything here comes from already-loaded publishers so
+        // init stays cheap and never gates first paint on network or crypto.
+        let viewModelInitSignpostID = RoomLoadSignposts.begin(.viewModelInit)
+        defer { RoomLoadSignposts.end(.viewModelInit, id: viewModelInitSignpostID) }
+        
         clientProxy = userSession.clientProxy
         self.roomProxy = roomProxy
         self.appSettings = appSettings
@@ -79,13 +89,34 @@ class RoomScreenViewModel: RoomScreenViewModelType, RoomScreenViewModelProtocol 
         updateRoomInfo(roomProxy.infoPublisher.value)
         setupSubscriptions(ongoingCallRoomIDPublisher: ongoingCallRoomIDPublisher)
         
-        Task {
-            await updateVerificationBadge()
+        // Note: the DM verification badge (crypto/key resolution) and the
+        // pinned-events timeline used to start here. They now run in
+        // startBackgroundPhases(), after first paint.
+    }
+    
+    /// Starts everything that must not gate first paint: crypto warmup for the
+    /// DM verification badge and the pinned-events timeline. Called once from
+    /// `RoomScreen.onAppear` via `.roomAppeared`; safe to call again (no-op).
+    func startBackgroundPhases() {
+        guard !backgroundPhasesStarted else { return }
+        backgroundPhasesStarted = true
+        
+        RoomLoadSignposts.event(.firstPaint)
+        // Ends the coordinator's `room_open` interval.
+        actionsSubject.send(.roomFirstPaint)
+        
+        Task { [weak self] in
+            await self?.warmCryptoWithTimeout()
+        }
+        Task { [weak self] in
+            await self?.loadPinnedEventsTimeline()
         }
     }
     
     override func process(viewAction: RoomScreenViewAction) {
         switch viewAction {
+        case .roomAppeared:
+            startBackgroundPhases()
         case .tappedPinnedEventsBanner:
             handleTappedPinnedEventsBanner()
         case .viewAllPins:
@@ -203,7 +234,13 @@ class RoomScreenViewModel: RoomScreenViewModelType, RoomScreenViewModelProtocol 
             .filter { $0 == .reachable }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.setupPinnedEventsTimelineItemProviderIfNeeded()
+                // Deferred until after first paint: building the pinned-events
+                // timeline spins up a second Rust timeline and must not race
+                // room load. startBackgroundPhases() kicks it off directly.
+                guard let self, self.backgroundPhasesStarted else { return }
+                Task { [weak self] in
+                    await self?.loadPinnedEventsTimeline()
+                }
             }
             .store(in: &cancellables)
         
@@ -234,6 +271,7 @@ class RoomScreenViewModel: RoomScreenViewModelType, RoomScreenViewModelProtocol 
         
         NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
             .sink { [weak self] _ in
+                RoomLoadSignposts.event(.retryDecryption)
                 self?.roomProxy.timeline.retryDecryption(sessionIDs: nil)
             }
             .store(in: &cancellables)
@@ -370,20 +408,56 @@ class RoomScreenViewModel: RoomScreenViewModelType, RoomScreenViewModelProtocol 
         state.roomHistorySharingState = roomInfo.historySharingState
     }
     
-    private func setupPinnedEventsTimelineItemProviderIfNeeded() {
-        guard pinnedEventsTimelineItemProvider == nil else {
-            return
+    /// DM verification badge identity lookup with a timeout. Cross-signing/key
+    /// resolution must not block first render, so when the budget expires we
+    /// keep the `.notVerified` placeholder and log a non-fatal instead.
+    /// (updateVerificationBadge itself already degrades to `.notVerified` on
+    /// lookup failure; the timeout only bounds how long we wait for it.)
+    private func warmCryptoWithTimeout() async {
+        let signpostID = RoomLoadSignposts.begin(.cryptoWarmup)
+        defer { RoomLoadSignposts.end(.cryptoWarmup, id: signpostID) }
+        
+        let finished: Bool? = await RoomLoadTimeout.withTimeout(seconds: RoomLoadBudgets.cryptoWarmup) { [weak self] in
+            guard let self else { return false }
+            await self.updateVerificationBadge()
+            return true
         }
         
-        Task {
-            guard case let .success(pinnedEventsTimeline) = await roomProxy.pinnedEventsTimeline() else {
-                return
-            }
+        // `nil` means the timeout fired first; `false` means the view model
+        // went away, in which case there is nothing to degrade or log.
+        guard finished == nil else { return }
+        
+        RoomLoadSignposts.event(.cryptoWarmupTimeout)
+        MXLog.warning("RoomScreen crypto warmup exceeded budget of \(RoomLoadBudgets.cryptoWarmup)s; keeping the unverified badge placeholder.")
+        analyticsService.trackError(context: "RoomScreen crypto warmup timed out; showing the unverified verification badge placeholder.",
+                                    domain: .E2EE,
+                                    name: .UnknownError)
+        state.dmRecipientDetails.verification = .notVerified
+    }
+    
+    /// Builds the pinned-events timeline after first paint. `pinnedEventsTimeline()`
+    /// constructs a second Rust timeline, so it runs here — in the background —
+    /// instead of racing room load on the homeserver-reachable signal.
+    private func loadPinnedEventsTimeline() async {
+        guard pinnedEventsTimelineItemProvider == nil else { return }
+        
+        let signpostID = RoomLoadSignposts.begin(.pinnedBanner)
+        defer { RoomLoadSignposts.end(.pinnedBanner, id: signpostID) }
+        
+        let loaded: Bool? = await RoomLoadTimeout.withTimeout(seconds: RoomLoadBudgets.pinnedBanner) { [weak self] in
+            guard let self else { return false }
+            guard case let .success(pinnedEventsTimeline) = await self.roomProxy.pinnedEventsTimeline() else { return false }
             
-            if pinnedEventsTimelineItemProvider == nil {
-                pinnedEventsTimelineItemProvider = pinnedEventsTimeline.timelineItemProvider
+            if self.pinnedEventsTimelineItemProvider == nil {
+                self.pinnedEventsTimelineItemProvider = pinnedEventsTimeline.timelineItemProvider
             }
+            return true
         }
+        
+        guard loaded == nil else { return }
+        
+        RoomLoadSignposts.event(.pinnedBannerTimeout)
+        MXLog.warning("RoomScreen pinned-events timeline exceeded budget of \(RoomLoadBudgets.pinnedBanner)s; the pins banner stays in its loading state.")
     }
     
     private func acceptKnock(eventID: String) async {
@@ -483,3 +557,4 @@ private extension KnockRequestInfo {
                   eventID: proxy.eventID)
     }
 }
+
