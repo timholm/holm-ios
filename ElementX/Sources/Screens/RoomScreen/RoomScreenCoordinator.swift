@@ -11,6 +11,7 @@ import Compound
 import HTMLParser
 import SwiftUI
 import WysiwygComposer
+import os
 
 struct RoomScreenCoordinatorParameters {
     let userSession: UserSessionProtocol
@@ -61,12 +62,26 @@ final class RoomScreenCoordinator: CoordinatorProtocol {
     
     private var cancellables = Set<AnyCancellable>()
     
+    /// The open `room_open` signpost interval, ended on `.roomFirstPaint`.
+    private var roomOpenSignpostID: OSSignpostID?
+    
     private let actionsSubject: PassthroughSubject<RoomScreenCoordinatorAction, Never> = .init()
     var actions: AnyPublisher<RoomScreenCoordinatorAction, Never> {
         actionsSubject.eraseToAnyPublisher()
     }
     
     init(parameters: RoomScreenCoordinatorParameters) {
+        // The `room_open` interval spans coordinator init -> first paint and is
+        // ended when the view model reports `.roomFirstPaint`. `coordinator_setup`
+        // covers the synchronous view-model construction below — note that this
+        // includes Worker 1/2 code (TimelineViewModel init builds the timeline
+        // views); see Other/Stability/RoomLoading/INTEGRATION.md for the
+        // sub-intervals they own.
+        let roomOpenSignpostID = RoomLoadSignposts.begin(.roomOpen)
+        let coordinatorSetupSignpostID = RoomLoadSignposts.begin(.coordinatorSetup)
+        defer { RoomLoadSignposts.end(.coordinatorSetup, id: coordinatorSetupSignpostID) }
+        
+        self.roomOpenSignpostID = roomOpenSignpostID
         appSettings = parameters.appSettings
         
         var selectedPinnedEventID: String?
@@ -186,6 +201,12 @@ final class RoomScreenCoordinator: CoordinatorProtocol {
                 guard let self else { return }
                 
                 switch action {
+                case .roomFirstPaint:
+                    // First paint: the room is on screen, end the `room_open` interval.
+                    if let roomOpenSignpostID {
+                        RoomLoadSignposts.end(.roomOpen, id: roomOpenSignpostID)
+                        self.roomOpenSignpostID = nil
+                    }
                 case .focusEvent(eventID: let eventID):
                     focusOnEvent(FocusEvent(eventID: eventID, shouldSetPin: false))
                 case .displayPinnedEventsTimeline:
@@ -258,3 +279,4 @@ enum ComposerConstant {
     static let allowedHeightRange = minHeight...maxHeight
     static let translationThreshold: CGFloat = 60
 }
+
