@@ -15,7 +15,9 @@ struct TimelineItemStatusView: View {
     @EnvironmentObject private var context: TimelineViewModel.Context
     
     private var isLastOutgoingMessage: Bool {
-        timelineItem.isOutgoing && context.viewState.timelineState.uniqueIDs.last == timelineItem.id.uniqueID
+        // Read the last key directly: materialising `uniqueIDs` copies the whole
+        // dictionary's keys on every evaluation of every status view.
+        timelineItem.isOutgoing && context.viewState.timelineState.itemsDictionary.keys.last == timelineItem.id.uniqueID
     }
     
     var body: some View {

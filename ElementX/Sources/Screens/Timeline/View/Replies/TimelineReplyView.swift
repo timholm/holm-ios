@@ -220,6 +220,7 @@ struct TimelineReplyView: View {
         
         @EnvironmentObject private var context: TimelineViewModel.Context
         @ScaledMetric private var imageContainerSize = 36.0
+        @State private var previewCache = MessagePreviewCache()
         
         let sender: TimelineItemSender
         let plainBody: String
@@ -242,7 +243,7 @@ struct TimelineReplyView: View {
                         .foregroundColor(.compound.textPrimary)
                         .accessibilityLabel(L10n.commonInReplyTo(sender.disambiguatedDisplayName ?? sender.id))
                     
-                    Text(context.viewState.buildMessagePreview(formattedBody: formattedBody, plainBody: plainBody))
+                    Text(previewCache.preview(for: context.viewState, formattedBody: formattedBody, plainBody: plainBody))
                         .font(.compound.bodyMD)
                         .foregroundColor(.compound.textSecondary)
                         .tint(.compound.textLinkExternal)

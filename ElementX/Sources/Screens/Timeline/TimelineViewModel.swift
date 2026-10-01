@@ -46,6 +46,8 @@ class TimelineViewModel: TimelineViewModelType, TimelineViewModelProtocol {
     
     private var paginateBackwardsTask: Task<Void, Never>?
     private var paginateForwardsTask: Task<Void, Never>?
+    private var sendReadReceiptTask: Task<Void, Never>?
+    private var pendingReadReceiptItemID: TimelineItemIdentifier?
     
     init(roomProxy: JoinedRoomProxyProtocol,
          focussedEventID: String? = nil,
@@ -175,7 +177,7 @@ class TimelineViewModel: TimelineViewModelType, TimelineViewModelProtocol {
             
             Task { await timelineController.toggleReaction(emoji, to: eventOrTransactionID) }
         case .sendReadReceiptIfNeeded(let lastVisibleItemID):
-            Task { await sendReadReceiptIfNeeded(for: lastVisibleItemID) }
+            sendReadReceipt(for: lastVisibleItemID)
         case .paginateBackwards:
             paginateBackwards()
         case .paginateForwards:
@@ -441,7 +443,7 @@ class TimelineViewModel: TimelineViewModelType, TimelineViewModelProtocol {
     }
     
     private func updateMembers(_ members: [RoomMemberProxyProtocol]) {
-        state.members = members.reduce(into: [String: RoomMemberState]()) { dictionary, member in
+        let updatedMembers = members.reduce(into: [String: RoomMemberState]()) { dictionary, member in
             dictionary[member.userID] = RoomMemberState(displayName: member.displayName,
                                                         avatarURL: member.avatarURL,
                                                         status: member.status)
@@ -449,20 +451,51 @@ class TimelineViewModel: TimelineViewModelType, TimelineViewModelProtocol {
                 currentUserProxy = member
             }
         }
+        
+        // Assigning view state invalidates every visible row, so skip snapshots that change nothing.
+        guard updatedMembers != state.members else { return }
+        state.members = updatedMembers
     }
     
     private func updateRoomInfo(_ roomInfo: RoomInfoProxyProtocol) {
-        state.pinnedEventIDs = roomInfo.pinnedEventIDs
-        state.isDM = roomInfo.isDM
-        state.timelineState.fullyReadEventID = roomInfo.fullyReadEventID
+        // Each assignment below invalidates every visible row through the published
+        // view state, so only assign on change. Room info is re-emitted on events
+        // (e.g. read receipts) that often leave these values untouched.
+        if state.pinnedEventIDs != roomInfo.pinnedEventIDs {
+            state.pinnedEventIDs = roomInfo.pinnedEventIDs
+        }
+        if state.isDM != roomInfo.isDM {
+            state.isDM = roomInfo.isDM
+        }
+        if state.timelineState.fullyReadEventID != roomInfo.fullyReadEventID {
+            state.timelineState.fullyReadEventID = roomInfo.fullyReadEventID
+        }
         
         if let powerLevels = roomInfo.powerLevels {
-            state.canCurrentUserSendMessage = powerLevels.canOwnUser(sendMessage: .roomMessage)
-            state.canCurrentUserRedactOthers = powerLevels.canOwnUserRedactOther()
-            state.canCurrentUserRedactSelf = powerLevels.canOwnUserRedactOwn()
-            state.canCurrentUserPin = powerLevels.canOwnUserPinOrUnpin()
-            state.canCurrentUserKick = powerLevels.canOwnUserKick()
-            state.canCurrentUserBan = powerLevels.canOwnUserBan()
+            let canSendMessage = powerLevels.canOwnUser(sendMessage: .roomMessage)
+            if state.canCurrentUserSendMessage != canSendMessage {
+                state.canCurrentUserSendMessage = canSendMessage
+            }
+            let canRedactOthers = powerLevels.canOwnUserRedactOther()
+            if state.canCurrentUserRedactOthers != canRedactOthers {
+                state.canCurrentUserRedactOthers = canRedactOthers
+            }
+            let canRedactOwn = powerLevels.canOwnUserRedactOwn()
+            if state.canCurrentUserRedactSelf != canRedactOwn {
+                state.canCurrentUserRedactSelf = canRedactOwn
+            }
+            let canPin = powerLevels.canOwnUserPinOrUnpin()
+            if state.canCurrentUserPin != canPin {
+                state.canCurrentUserPin = canPin
+            }
+            let canKick = powerLevels.canOwnUserKick()
+            if state.canCurrentUserKick != canKick {
+                state.canCurrentUserKick = canKick
+            }
+            let canBan = powerLevels.canOwnUserBan()
+            if state.canCurrentUserBan != canBan {
+                state.canCurrentUserBan = canBan
+            }
         }
     }
     
@@ -714,6 +747,22 @@ class TimelineViewModel: TimelineViewModelType, TimelineViewModelProtocol {
         }
     }
     
+    /// Serialises read receipt sends, coalescing bursts (e.g. during sync or pagination)
+    /// into a trailing send for the latest visible item instead of one task per action.
+    private func sendReadReceipt(for itemID: TimelineItemIdentifier) {
+        pendingReadReceiptItemID = itemID
+        
+        guard sendReadReceiptTask == nil else { return }
+        
+        sendReadReceiptTask = Task { [weak self] in
+            while let self, let itemID = self.pendingReadReceiptItemID {
+                self.pendingReadReceiptItemID = nil
+                await self.sendReadReceiptIfNeeded(for: itemID)
+            }
+            self?.sendReadReceiptTask = nil
+        }
+    }
+    
     private func sendReadReceiptIfNeeded(for lastVisibleItemID: TimelineItemIdentifier) async {
         guard appMediator.appState == .active else { return }
         
@@ -954,8 +1003,16 @@ class TimelineViewModel: TimelineViewModelType, TimelineViewModelProtocol {
     
     private func updateViewState(item: RoomTimelineItemProtocol, groupStyle: TimelineGroupStyle) -> RoomTimelineItemViewState {
         if let timelineItemViewState = state.timelineState.itemsDictionary[item.id.uniqueID] {
-            timelineItemViewState.groupStyle = groupStyle
-            timelineItemViewState.type = .init(item: item)
+            // Both properties are @Published, so unconditional assignment invalidates
+            // every visible row on each timeline update. Only assign on change so that
+            // untouched items keep their identity and skip view updates.
+            let type = RoomTimelineItemType(item: item)
+            if timelineItemViewState.type != type {
+                timelineItemViewState.type = type
+            }
+            if timelineItemViewState.groupStyle != groupStyle {
+                timelineItemViewState.groupStyle = groupStyle
+            }
             return timelineItemViewState
         } else {
             return RoomTimelineItemViewState(item: item, groupStyle: groupStyle)
