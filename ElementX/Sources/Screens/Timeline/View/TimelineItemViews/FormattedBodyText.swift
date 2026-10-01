@@ -22,20 +22,13 @@ struct FormattedBodyText: View {
         return container
     }()
     
-    private var attributedComponents: [AttributedStringBuilderComponent] {
-        var adjustedAttributedString = attributedString
-        
-        // Required to allow the underlying TextView to use  body font when no font is specified in the AttributedString.
-        adjustedAttributedString.mergeAttributes(defaultAttributesContainer, mergePolicy: .keepCurrent)
-        
-        let string = String(attributedString.characters)
-        
-        if boostFontSize, let range = adjustedAttributedString.range(of: string) {
-            adjustedAttributedString[range].font = UIFont.systemFont(ofSize: 48.0)
-        }
-        
-        return adjustedAttributedString.formattedComponents
-    }
+    /// Precomputed in `init` so body evaluation stays cheap: every input is immutable,
+    /// so recomputing this per body pass only repeated identical AttributedString scans.
+    private let attributedComponents: [AttributedStringBuilderComponent]
+    
+    /// Details components contain a control that VoiceOver needs to reach, so their children can't be merged away.
+    /// Precomputed in `init` for the same reason as `attributedComponents`.
+    private let containsDetails: Bool
     
     init(attributedString: AttributedString,
          trailingReservedSize: CGSize = .zero,
@@ -43,17 +36,16 @@ struct FormattedBodyText: View {
         self.attributedString = attributedString
         self.trailingReservedSize = trailingReservedSize
         self.boostFontSize = boostFontSize
+        containsDetails = attributedString.runs[\.details].contains { $0.0 != nil }
+        attributedComponents = Self.makeAttributedComponents(attributedString: attributedString,
+                                                             boostFontSize: boostFontSize,
+                                                             defaultAttributesContainer: defaultAttributesContainer)
     }
     
     init(text: String, trailingReservedSize: CGSize = .zero, boostFontSize: Bool = false) {
         self.init(attributedString: AttributedString(text),
                   trailingReservedSize: trailingReservedSize,
                   boostFontSize: boostFontSize)
-    }
-    
-    /// Details components contain a control that VoiceOver needs to reach, so their children can't be merged away.
-    private var containsDetails: Bool {
-        attributedString.runs[\.details].contains { $0.0 != nil }
     }
     
     var body: some View {
@@ -128,6 +120,23 @@ struct FormattedBodyText: View {
         }
     }
     
+    private static func makeAttributedComponents(attributedString: AttributedString,
+                                                 boostFontSize: Bool,
+                                                 defaultAttributesContainer: AttributeContainer) -> [AttributedStringBuilderComponent] {
+        var adjustedAttributedString = attributedString
+        
+        // Required to allow the underlying TextView to use  body font when no font is specified in the AttributedString.
+        adjustedAttributedString.mergeAttributes(defaultAttributesContainer, mergePolicy: .keepCurrent)
+        
+        let string = String(attributedString.characters)
+        
+        if boostFontSize, let range = adjustedAttributedString.range(of: string) {
+            adjustedAttributedString[range].font = UIFont.systemFont(ofSize: 48.0)
+        }
+        
+        return adjustedAttributedString.formattedComponents
+    }
+    
     // MARK: - Component Views
     
     /// The view used to render a blockquote component. It can be configured in one of 2 modes:
@@ -138,8 +147,19 @@ struct FormattedBodyText: View {
         let attributedString: AttributedString
         let mode: TimelineBubbleLayout.Size.BubbleWidthMode
         
+        /// Merged once at init: `mergingAttributes` copies the whole string, so doing it in
+        /// body repeated the copy on every evaluation, twice per component (visible view plus
+        /// the hidden layout-measurement view).
+        private let mergedAttributedString: AttributedString
+        
+        init(attributedString: AttributedString, mode: TimelineBubbleLayout.Size.BubbleWidthMode) {
+            self.attributedString = attributedString
+            self.mode = mode
+            mergedAttributedString = attributedString.mergingAttributes(Self.blockquoteAttributes)
+        }
+        
         var body: some View {
-            MessageText(attributedString: attributedString.mergingAttributes(blockquoteAttributes))
+            MessageText(attributedString: mergedAttributedString)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: mode == .rendering ? .infinity : nil, alignment: .leading)
                 .padding(.leading, 12.0)
@@ -155,7 +175,7 @@ struct FormattedBodyText: View {
                 }
         }
         
-        private var blockquoteAttributes: AttributeContainer {
+        private static var blockquoteAttributes: AttributeContainer {
             // The paragraph style removes the block style paragraph that the parser adds by default
             // Set directly in the constructor to avoid `Conformance to 'Sendable'` warnings
             var container = AttributeContainer([.paragraphStyle: NSParagraphStyle.default])
