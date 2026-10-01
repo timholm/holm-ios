@@ -318,9 +318,8 @@ nonisolated struct NotificationContentBuilder {
         
         // Update notification content before displaying the
         // communication notification.
-        if let updatedContent = try? notificationContent.updating(from: intent) {
-            // swiftlint:disable:next force_cast
-            let content = updatedContent.mutableCopy() as! UNMutableNotificationContent
+        if let updatedContent = try? notificationContent.updating(from: intent),
+           let content = updatedContent.mutableCopy() as? UNMutableNotificationContent {
             notificationContent = content
         }
     }
