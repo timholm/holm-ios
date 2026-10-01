@@ -29,6 +29,12 @@ extension UIImage {
         let pixelWidth = Int(round(size.width * scale))
         let pixelHeight = Int(round(size.height * scale))
         
+        // A zero-size image makes CGBitmapContextCreate return nil, which the
+        // force-unwrap below would trap on. Bail out instead of crashing.
+        guard pixelWidth > 0, pixelHeight > 0 else {
+            return nil
+        }
+        
         let context = CGContext(data: nil,
                                 width: pixelWidth,
                                 height: pixelHeight,
@@ -66,7 +72,9 @@ extension UIImage {
             }
         }
         
-        let dc = factors.first!
+        guard let dc = factors.first else {
+            return nil
+        }
         let ac = factors.dropFirst()
         
         var hash = ""
