@@ -104,7 +104,7 @@ class TimelineController: TimelineControllerProtocol {
     
     func paginateBackwards(requestSize: UInt16) async -> Result<Void, TimelineControllerError> {
         MXLog.info("Started back pagination request")
-        switch await activeTimeline.paginateBackwards(requestSize: requestSize) {
+        switch await paginateWithRetry(direction: .backwards, requestSize: requestSize) {
         case .success:
             MXLog.info("Finished back pagination request")
             return .success(())
@@ -116,7 +116,7 @@ class TimelineController: TimelineControllerProtocol {
     
     func paginateForwards(requestSize: UInt16) async -> Result<Void, TimelineControllerError> {
         MXLog.info("Started forward pagination request")
-        switch await activeTimeline.paginateForwards(requestSize: requestSize) {
+        switch await paginateWithRetry(direction: .forwards, requestSize: requestSize) {
         case .success:
             MXLog.info("Finished forward pagination request")
             return .success(())
@@ -124,6 +124,43 @@ class TimelineController: TimelineControllerProtocol {
             MXLog.error("Failed forward pagination request with error: \(error)")
             return .failure(.generic)
         }
+    }
+    
+    /// Retries a pagination request with exponential backoff. History loads fail transiently on
+    /// flaky connections; retrying here keeps the timeline usable instead of surfacing an error
+    /// the moment the first attempt fails. Already-loaded items stay visible throughout.
+    private func paginateWithRetry(direction: PaginationDirection, requestSize: UInt16) async -> Result<Void, TimelineProxyError> {
+        let maxAttempts = 3
+        var lastError: TimelineProxyError?
+        
+        for attempt in 1...maxAttempts {
+            guard !Task.isCancelled else {
+                break
+            }
+            
+            let result = switch direction {
+            case .backwards:
+                await activeTimeline.paginateBackwards(requestSize: requestSize)
+            case .forwards:
+                await activeTimeline.paginateForwards(requestSize: requestSize)
+            }
+            
+            switch result {
+            case .success:
+                return .success(())
+            case .failure(let error):
+                lastError = error
+                MXLog.warning("Pagination \(direction.rawValue) attempt \(attempt) of \(maxAttempts) failed with error: \(error)")
+                
+                if attempt < maxAttempts {
+                    try? await Task.sleep(for: RetryPolicy.delayBeforeRetry(attempt: attempt,
+                                                                            baseDelay: .milliseconds(500),
+                                                                            maxDelay: .seconds(4)))
+                }
+            }
+        }
+        
+        return .failure(lastError ?? .sdkError(CancellationError()))
     }
     
     func sendReadReceipt(for itemID: TimelineItemIdentifier) async {
