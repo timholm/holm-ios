@@ -153,6 +153,31 @@ class TimelineController: TimelineControllerProtocol {
     func toggleReaction(_ reaction: String, to eventOrTransactionID: TimelineItemIdentifier.EventOrTransactionID) async {
         MXLog.info("Toggle reaction \(reaction) to \(eventOrTransactionID)")
         
+        let key = ReactionToggleKey(eventOrTransactionID: eventOrTransactionID, reaction: reaction)
+        
+        // Chain onto any in-flight toggle for the same event+emoji: the new toggle
+        // only starts once the previous one has updated local state, so the SDK sees
+        // the just-sent reaction and redacts it (proper toggle semantics) instead of
+        // racing the check and sending a duplicate the server rejects with
+        // M_DUPLICATE_ANNOTATION. Read and store are atomic: nothing suspends between them.
+        let previousToggle = inFlightReactionToggles[key]
+        let toggle = Task {
+            if let previousToggle {
+                await previousToggle.value
+            }
+            await performToggleReaction(reaction, to: eventOrTransactionID)
+        }
+        inFlightReactionToggles[key] = toggle
+        
+        defer {
+            if inFlightReactionToggles[key] === toggle {
+                inFlightReactionToggles[key] = nil
+            }
+        }
+        await toggle.value
+    }
+    
+    private func performToggleReaction(_ reaction: String, to eventOrTransactionID: TimelineItemIdentifier.EventOrTransactionID) async {
         switch await activeTimeline.toggleReaction(reaction, to: eventOrTransactionID) {
         case .success:
             MXLog.info("Finished toggling reaction")
@@ -444,6 +469,10 @@ class TimelineController: TimelineControllerProtocol {
     private var updateTimelineItemsCancellable: AnyCancellable?
     /// The controller is switching the `activeTimelineItemProvider`.
     private var isSwitchingTimelines = false
+    /// Reaction toggles currently in flight, keyed by event and emoji. A new tap
+    /// for the same event+emoji chains onto the in-flight toggle so the SDK's
+    /// check-then-act stays serialised and can't send the reaction twice.
+    private var inFlightReactionToggles = [ReactionToggleKey: Task<Void, Never>]()
     
     /// Configures the controller to listen to `activeTimeline` for events.
     /// - Parameter clearExistingItems: Whether or not to clear any existing items before loading the timeline's contents.
@@ -676,6 +705,13 @@ class TimelineController: TimelineControllerProtocol {
 }
 
 private extension TimelineController {
+    /// Identifies a reaction toggle operation so concurrent taps for the same
+    /// event+emoji can be serialised instead of racing inside the SDK.
+    struct ReactionToggleKey: Hashable {
+        let eventOrTransactionID: TimelineItemIdentifier.EventOrTransactionID
+        let reaction: String
+    }
+    
     /// Media repo thumbnails are scaled, not cropped, so they keep the source's aspect
     /// ratio. The share sheet's conversation suggestions stretch the donated image to fill
     /// their circle, so centre-crop it to a square first.
